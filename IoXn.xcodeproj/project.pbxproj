@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		504A49A62D5FB909006CA1E0 /* Nimble in Frameworks */ = {isa = PBXBuildFile; productRef = 504A49A52D5FB909006CA1E0 /* Nimble */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		504A495A2D5FB7FC006CA1E0 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -59,6 +63,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				504A49A62D5FB909006CA1E0 /* Nimble in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -135,6 +140,7 @@
 			);
 			name = IoXnTests;
 			packageProductDependencies = (
+				504A49A52D5FB909006CA1E0 /* Nimble */,
 			);
 			productName = IoXnTests;
 			productReference = 504A49592D5FB7FC006CA1E0 /* IoXnTests.xctest */;
@@ -195,6 +201,9 @@
 			);
 			mainGroup = 504A49402D5FB7FB006CA1E0;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				504A49A42D5FB88A006CA1E0 /* XCRemoteSwiftPackageReference "Nimble" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 504A494A2D5FB7FB006CA1E0 /* Products */;
 			projectDirPath = "";
@@ -558,6 +567,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		504A49A42D5FB88A006CA1E0 /* XCRemoteSwiftPackageReference "Nimble" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Quick/Nimble.git";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		504A49A52D5FB909006CA1E0 /* Nimble */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 504A49A42D5FB88A006CA1E0 /* XCRemoteSwiftPackageReference "Nimble" */;
+			productName = Nimble;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 504A49412D5FB7FB006CA1E0 /* Project object */;
 }
