@@ -5,27 +5,42 @@ import Nimble
 struct IoXnTests {
 
     @Test func opcodeAdd() async throws {
-        let processor = Processor().push(1).push(2).opcode(.add)
-        
-        expect(processor.workingStack[0]).to(equal(3))
+        expect(
+            Processor().push(1).push(2).opcode(.add).pop().a
+        ).to(equal(3))
+        expect(
+            Processor().push(255).push(1).opcode(.add).pop().a
+        ).to(equal(0))
     }
     
     @Test func opcodeSub() async throws {
-        let processor = Processor().push(2).push(1).opcode(.sub)
-        
-        expect(processor.workingStack[0]).to(equal(1))
+        expect(
+            Processor().push(2).push(1).opcode(.sub).pop().a
+        ).to(equal(1))
+        expect(
+            Processor().push(1).push(2).opcode(.sub).pop().a
+        ).to(equal(255))
     }
     
     @Test func opcodeMul() async throws {
-        let processor = Processor().push(2).push(2).opcode(.mul)
-        
-        expect(processor.workingStack[0]).to(equal(4))
+        expect(
+            Processor().push(2).push(2).opcode(.mul).pop().a
+        ).to(equal(4))
+        expect(
+            Processor().push(130).push(2).opcode(.mul).pop().a
+        ).to(equal(4))
     }
     
     @Test func opcodeDiv() async throws {
-        let processor = Processor().push(2).push(2).opcode(.div)
-        
-        expect(processor.workingStack[0]).to(equal(1))
+        expect(
+            Processor().push(6).push(2).opcode(.div).pop().a
+        ).to(equal(3))
+        expect(
+            Processor().push(255).push(2).opcode(.div).pop().a
+        ).to(equal(127))
+        expect(
+            Processor().push(12).push(0).opcode(.div).pop().a
+        ).to(equal(0))
     }
 }
 
@@ -66,13 +81,15 @@ struct Processor {
     func opcode(_ opcode: Opcode) -> Processor {
         switch opcode {
         case .add:
-            return self.pop().pop().apply(+).push()
+            return self.pop().pop().apply(&+).push()
         case .sub:
-            return self.pop().pop().swap().apply(-).push()
+            return self.pop().pop().swap().apply(&-).push()
         case .mul:
-            return self.pop().pop().apply(*).push()
+            return self.pop().pop().apply(&*).push()
         case .div:
-            return self.pop().pop().apply(/).push()
+            return self.pop().pop().swap().apply(
+                { a, b in b == 0 ? 0 : a / b}
+            ).push()
         }
     }
 }
