@@ -90,6 +90,16 @@ struct IoXnTests {
                 .workingStack).to(equal([1, 2, 2]))
     }
 
+    @Test func opcodeOvr() async throws {
+        expect(
+            Processor()
+                .push(1)
+                .push(2)
+                .opcode(.ovr)
+                .workingStack).to(equal([1, 2, 1]))
+    }
+
+    
 }
 
 enum Opcode {
@@ -99,6 +109,7 @@ enum Opcode {
     case div
     case rot
     case dup
+    case ovr
 }
 
 struct Processor {
@@ -139,21 +150,23 @@ struct Processor {
     func opcode(_ opcode: Opcode) -> Processor {
         switch opcode {
         case .add:
-            return self.pop().pop().apply(&+).push()
+            return self.pop().pop().apply21(&+).push()
         case .sub:
-            return self.pop().pop().apply(&-).push()
+            return self.pop().pop().apply21(&-).push()
         case .mul:
-            return self.pop().pop().apply(&*).push()
+            return self.pop().pop().apply21(&*).push()
         case .div:
-            return self.pop().pop().apply(
+            return self.pop().pop().apply21(
                 { a, b in b == 0 ? 0 : a / b}
             ).push()
         case .rot:
-            return self.pop().pop().pop().apply({
+            return self.pop().pop().pop().apply33({
                 a, b, c in (b, c, a)
             }).push().push().push()
         case .dup:
-            return self.peek().apply( { a in a } ).push()
+            return self.peek().apply11( { a in a } ).push()
+        case .ovr:
+            return self.pop().pop().apply23( { a, b in (a, b, a) } ).push().push().push()
         }
     }
 }
@@ -174,7 +187,7 @@ struct UnaryOperationInProgress {
         )
     }
     
-    func apply(_ operation: (UInt8) -> UInt8) -> OperationUnaryResult {
+    func apply11(_ operation: (UInt8) -> UInt8) -> OperationUnaryResult {
         return OperationUnaryResult(
             result: operation(a),
             processor: processor
@@ -188,9 +201,19 @@ struct BinaryOperationInProgress {
     let b: UInt8
     let processor: Processor
     
-    func apply(_ operation: (UInt8, UInt8) -> UInt8) -> OperationUnaryResult {
+    func apply21(_ operation: (UInt8, UInt8) -> UInt8) -> OperationUnaryResult {
         return OperationUnaryResult(
             result: operation(a, b),
+            processor: processor
+        )
+    }
+    
+    func apply23(_ operation: (UInt8, UInt8) -> (UInt8, UInt8, UInt8)) -> OperationTernaryResult {
+        let (a, b, c) = operation(a, b)
+        return OperationTernaryResult(
+            resultA: a,
+            resultB: b,
+            resultC: c,
             processor: processor
         )
     }
@@ -223,7 +246,7 @@ struct TernaryOperationInProgress {
     let c: UInt8
     let processor: Processor
     
-    func apply(_ operation: (UInt8, UInt8, UInt8) -> (UInt8, UInt8, UInt8)) -> OperationTernaryResult {
+    func apply33(_ operation: (UInt8, UInt8, UInt8) -> (UInt8, UInt8, UInt8)) -> OperationTernaryResult {
         let (resultA, resultB, resultC) = operation(a, b, c)
         return OperationTernaryResult(
             resultA: resultA,
