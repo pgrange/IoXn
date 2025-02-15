@@ -80,6 +80,16 @@ struct IoXnTests {
                 .opcode(.rot)
                 .workingStack).to(equal([2, 3, 1]))
     }
+    
+    @Test func opcodeDup() async throws {
+        expect(
+            Processor()
+                .push(1)
+                .push(2)
+                .opcode(.dup)
+                .workingStack).to(equal([1, 2, 2]))
+    }
+
 }
 
 enum Opcode {
@@ -88,6 +98,7 @@ enum Opcode {
     case mul
     case div
     case rot
+    case dup
 }
 
 struct Processor {
@@ -117,6 +128,14 @@ struct Processor {
         )
     }
     
+    func peek() -> UnaryOperationInProgress {
+        let a = workingStack.last!
+        return UnaryOperationInProgress(
+            a: a,
+            processor: self
+        )
+    }
+    
     func opcode(_ opcode: Opcode) -> Processor {
         switch opcode {
         case .add:
@@ -133,6 +152,8 @@ struct Processor {
             return self.pop().pop().pop().apply({
                 a, b, c in (b, c, a)
             }).push().push().push()
+        case .dup:
+            return self.peek().apply( { a in a } ).push()
         }
     }
 }
@@ -152,6 +173,14 @@ struct UnaryOperationInProgress {
             )
         )
     }
+    
+    func apply(_ operation: (UInt8) -> UInt8) -> OperationUnaryResult {
+        return OperationUnaryResult(
+            result: operation(a),
+            processor: processor
+        )
+    }
+
 }
 
 struct BinaryOperationInProgress {
