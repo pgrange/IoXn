@@ -8,7 +8,7 @@ import Nimble
  Implementation guide https://github.com/DeltaF1/uxn-impl-guide?utm_source=chatgpt.com
  */
 
-struct IoXnTests {
+struct IoXnArithemticTests {
     
     @Test func opcodeAdd() async throws {
         expect(Processor()
@@ -72,7 +72,7 @@ struct IoXnTests {
         ).to(equal(Processor().with(
             workingStack: [3]
         )))
-            
+        
         expect(Processor()
             .push(255)
             .push(2)
@@ -89,6 +89,9 @@ struct IoXnTests {
             workingStack: [0]
         )))
     }
+}
+
+struct IoXnStackTests {
     
     @Test func opcodeRot() async throws {
         let result = Processor()
@@ -112,7 +115,7 @@ struct IoXnTests {
             workingStack: [1, 2, 2]
         )))
     }
-
+    
     @Test func opcodeOvr() async throws {
         let processor = Processor()
             .push(1)
@@ -133,7 +136,9 @@ struct IoXnTests {
             returnStack: [2]
         )))
     }
-    
+}
+
+struct IoXnMemoryTests {
     @Test func opcodeLdz() async throws {
         let initialMemory = Memory().write(UInt8(2), 250)
         
