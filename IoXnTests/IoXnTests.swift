@@ -147,8 +147,8 @@ struct IoXnMemoryTests {
             .opcode(.ldz)
         
         expect(processor).to(equal(Processor().with(
-            memory: initialMemory,
-            workingStack: [250]
+            workingStack: [250],
+            memory: initialMemory
         )))
     }
     
@@ -164,6 +164,24 @@ struct IoXnMemoryTests {
     }
 }
 
+struct IoXnProgramCounterTests {
+    @Test func opcodeJmp() async throws {
+        expect(Processor().with(programCounter: 12043)
+            .push(2)
+            .opcode(.jmp)
+       ).to(equal(Processor().with(
+            programCounter: 12045
+        )))
+        
+        expect(Processor().with(programCounter: 12043)
+            .push(0 &- 2)
+            .opcode(.jmp)
+       ).to(equal(Processor().with(
+            programCounter: 12041
+        )))
+    }
+}
+
 enum Opcode {
     case add
     case sub
@@ -175,6 +193,7 @@ enum Opcode {
     case sth
     case ldz
     case stz
+    case jmp
 }
 
 enum Stack {
@@ -221,18 +240,29 @@ struct Processor : Equatable {
     let memory: Memory
     let workingStack: [UInt8]
     let returnStack: [UInt8]
+    let programeCounter: UInt16
     
-    private init(memory: Memory = Memory(), workingStack: [UInt8] = [], returnStack: [UInt8] = []) {
+    private init(
+        memory: Memory = Memory(),
+        workingStack: [UInt8] = [],
+        returnStack: [UInt8] = []
+    ) {
         self.memory = memory
         self.workingStack = workingStack
         self.returnStack = returnStack
+        self.programeCounter = 0x100
     }
     
     init() {
         self.init(memory: Memory())
     }
     
-    func with(memory: Memory? = nil, workingStack: [UInt8]? = nil, returnStack: [UInt8]? = nil) -> Processor {
+    func with(
+        programCounter: UInt16? = nil,
+        workingStack: [UInt8]? = nil,
+        returnStack: [UInt8]? = nil,
+        memory: Memory? = nil
+    ) -> Processor {
         return Processor(
             memory: memory ?? self.memory,
             workingStack: workingStack ?? self.workingStack,
@@ -294,6 +324,12 @@ struct Processor : Equatable {
                 .apply( { op in
                     op.processor.with(memory: op.processor.memory.write(op.b, op.a))
                 } )
+        case .jmp:
+            return self
+                .pop()
+                .apply( { op in op.processor.with(
+                    programCounter: op.processor.programeCounter &+ UInt16(op.a)
+                )})
         }
     }
 }
@@ -313,13 +349,16 @@ struct UnaryOperationInProgress {
         )
     }
     
+    func apply(_ operation: (UnaryOperationInProgress) -> Processor) -> Processor {
+        return operation(self)
+    }
+    
     func apply11(_ operation: (UInt8) -> UInt8) -> OperationUnaryResult {
         return OperationUnaryResult(
             result: operation(a),
             processor: processor
         )
     }
-
 }
 
 struct BinaryOperationInProgress {
