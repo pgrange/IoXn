@@ -98,8 +98,14 @@ struct IoXnTests {
                 .opcode(.ovr)
                 .workingStack).to(equal([1, 2, 1]))
     }
-
     
+    @Test func opcodeSth() async throws {
+        let processor = Processor()
+            .push(2)
+            .opcode(.sth)
+        expect(processor.workingStack).to(equal([]))
+        expect(processor.returnStack).to(equal([2]))
+    }
 }
 
 enum Opcode {
@@ -110,6 +116,12 @@ enum Opcode {
     case rot
     case dup
     case ovr
+    case sth
+}
+
+enum Stack {
+    case workingStack
+    case returnStack
 }
 
 struct Processor {
@@ -167,6 +179,8 @@ struct Processor {
             return self.peek().apply11( { a in a } ).push()
         case .ovr:
             return self.pop().pop().apply23( { a, b in (a, b, a) } ).push().push().push()
+        case .sth:
+            return self.pop().apply11( { a in a } ).push(.returnStack)
         }
     }
 }
@@ -261,11 +275,19 @@ struct OperationUnaryResult {
     let result: UInt8
     let processor: Processor
     
-    func push() -> Processor {
-        return Processor(
-            workingStack: processor.workingStack + [result],
-            returnStack: processor.returnStack
-        )
+    func push(_ stack: Stack = .workingStack) -> Processor {
+        switch stack {
+        case .workingStack:
+            return Processor(
+                workingStack: processor.workingStack + [result],
+                returnStack: processor.returnStack
+            )
+        case .returnStack:
+            return Processor(
+                workingStack: processor.workingStack,
+                returnStack: processor.returnStack + [result]
+            )
+        }
     }
 }
 
