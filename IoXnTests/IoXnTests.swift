@@ -2,109 +2,160 @@ import Testing
 import Nimble
 @testable import IoXn
 
+/**
+ Instruction set uxn https://wiki.xxiivv.com/site/uxntal_reference.html
+ Varvara specification https://wiki.xxiivv.com/site/varvara.html?utm_source=chatgpt.com
+ Implementation guide https://github.com/DeltaF1/uxn-impl-guide?utm_source=chatgpt.com
+ */
+
 struct IoXnTests {
     
     @Test func opcodeAdd() async throws {
-        expect(
-            Processor()
-                .push(1)
-                .push(2)
-                .opcode(.add)
-                .workingStack).to(equal([3]))
-        expect(
-            Processor()
-                .push(255)
-                .push(1)
-                .opcode(.add)
-                .workingStack).to(equal([0]))
+        expect(Processor()
+            .push(1)
+            .push(2)
+            .opcode(.add)
+        ).to(equal(Processor().with(
+            workingStack: [3]
+        )))
+        
+        expect(Processor()
+            .push(255)
+            .push(1)
+            .opcode(.add)
+        ).to(equal(Processor().with(
+            workingStack: [0]
+        )))
     }
     
     @Test func opcodeSub() async throws {
-        expect(
-            Processor()
-                .push(2)
-                .push(1)
-                .opcode(.sub)
-                .workingStack).to(equal([1]))
-        expect(
-            Processor()
-                .push(1)
-                .push(2)
-                .opcode(.sub)
-                .workingStack).to(equal([255]))
+        expect(Processor()
+            .push(2)
+            .push(1)
+            .opcode(.sub)
+        ).to(equal(Processor().with(
+            workingStack: [1]
+        )))
+        
+        expect(Processor()
+            .push(1)
+            .push(2)
+            .opcode(.sub)
+        ).to(equal(Processor().with(
+            workingStack: [255]
+        )))
     }
     
     @Test func opcodeMul() async throws {
-        expect(
-            Processor()
-                .push(2)
-                .push(2)
-                .opcode(.mul)
-                .workingStack).to(equal([4]))
+        expect(Processor()
+            .push(2)
+            .push(2)
+            .opcode(.mul)
+        ).to(equal(Processor().with(
+            workingStack: [4]
+        )))
         
-        expect(
-            Processor()
-                .push(130)
-                .push(2)
-                .opcode(.mul)
-                .workingStack).to(equal([4]))
+        expect(Processor()
+            .push(130)
+            .push(2)
+            .opcode(.mul)
+        ).to(equal(Processor().with(
+            workingStack: [4]
+        )))
     }
     
     @Test func opcodeDiv() async throws {
-        expect(
-            Processor()
-                .push(6)
-                .push(2)
-                .opcode(.div)
-                .workingStack).to(equal([3]))
-        expect(
-            Processor()
-                .push(255)
-                .push(2)
-                .opcode(.div)
-                .workingStack).to(equal([127]))
-        expect(
-            Processor()
-                .push(12)
-                .push(0)
-                .opcode(.div)
-                .workingStack).to(equal([0]))
+        expect(Processor()
+            .push(6)
+            .push(2)
+            .opcode(.div)
+        ).to(equal(Processor().with(
+            workingStack: [3]
+        )))
+            
+        expect(Processor()
+            .push(255)
+            .push(2)
+            .opcode(.div)
+        ).to(equal(Processor().with(
+            workingStack: [127]
+        )))
+        
+        expect(Processor()
+            .push(12)
+            .push(0)
+            .opcode(.div)
+        ).to(equal(Processor().with(
+            workingStack: [0]
+        )))
     }
     
     @Test func opcodeRot() async throws {
-        expect(
-            Processor()
-                .push(1)
-                .push(2)
-                .push(3)
-                .opcode(.rot)
-                .workingStack).to(equal([2, 3, 1]))
+        let result = Processor()
+            .push(1)
+            .push(2)
+            .push(3)
+            .opcode(.rot)
+        
+        expect(result).to(equal(Processor().with(
+            workingStack: [2, 3, 1]
+        )))
     }
     
     @Test func opcodeDup() async throws {
-        expect(
-            Processor()
-                .push(1)
-                .push(2)
-                .opcode(.dup)
-                .workingStack).to(equal([1, 2, 2]))
+        let result = Processor()
+            .push(1)
+            .push(2)
+            .opcode(.dup)
+        
+        expect(result).to(equal(Processor().with(
+            workingStack: [1, 2, 2]
+        )))
     }
 
     @Test func opcodeOvr() async throws {
-        expect(
-            Processor()
-                .push(1)
-                .push(2)
-                .opcode(.ovr)
-                .workingStack).to(equal([1, 2, 1]))
+        let processor = Processor()
+            .push(1)
+            .push(2)
+            .opcode(.ovr)
+        
+        expect(processor).to(equal(Processor().with(
+            workingStack: [1, 2, 1]
+        )))
     }
     
     @Test func opcodeSth() async throws {
         let processor = Processor()
             .push(2)
             .opcode(.sth)
-        expect(processor.workingStack).to(equal([]))
-        expect(processor.returnStack).to(equal([2]))
+        
+        expect(processor).to(equal(Processor().with(
+            returnStack: [2]
+        )))
+    }
+    
+    @Test func opcodeLdz() async throws {
+        let initialMemory = Memory().write(UInt8(2), 250)
+        
+        let processor = Processor().with(memory: initialMemory)
+            .push(2)
+            .opcode(.ldz)
+        
+        expect(processor).to(equal(Processor().with(
+            memory: initialMemory,
+            workingStack: [250]
+        )))
+    }
+    
+    @Test func opcodeStz() async throws {
+        let processor = Processor()
+            .push(2)
+            .push(250)
+            .opcode(.stz)
+        
+        expect(processor).to(equal(Processor().with(
+            memory: Memory().write(UInt8(250), 2)
+        )))
     }
 }
 
@@ -117,6 +168,8 @@ enum Opcode {
     case dup
     case ovr
     case sth
+    case ldz
+    case stz
 }
 
 enum Stack {
@@ -124,19 +177,67 @@ enum Stack {
     case returnStack
 }
 
-struct Processor {
+struct Memory : Equatable {
+    let data: [UInt16: UInt8]
+    
+    init(data: [UInt16 : UInt8]) {
+        self.data = data
+    }
+    
+    init() {
+        self.data = [UInt16:UInt8]()
+    }
+    
+    func read(_ address: UInt16) -> UInt8 {
+        return data[address] ?? 0
+    }
+    
+    func read(_ address: UInt8) -> UInt8 {
+        return self.read(UInt16(address))
+    }
+    
+    
+    func write(_ address: UInt16, _ value: UInt8) -> Memory {
+        var data = self.data
+        data[address] = value
+        return Memory(data: data)
+    }
+    
+    func write(_ address: UInt8, _ value: UInt8) -> Memory {
+        return self.write(UInt16(address), value)
+    }
+    
+    static func == (lhs: Memory, rhs: Memory) -> Bool {
+        lhs.data == rhs.data
+    }
+}
+
+struct Processor : Equatable {
+    let memory: Memory
     let workingStack: [UInt8]
     let returnStack: [UInt8]
     
-    init(workingStack: [UInt8] = [], returnStack: [UInt8] = []) {
+    private init(memory: Memory = Memory(), workingStack: [UInt8] = [], returnStack: [UInt8] = []) {
+        self.memory = memory
         self.workingStack = workingStack
         self.returnStack = returnStack
     }
     
-    func push(_ value: UInt8) -> Processor {
+    init() {
+        self.init(memory: Memory())
+    }
+    
+    func with(memory: Memory? = nil, workingStack: [UInt8]? = nil, returnStack: [UInt8]? = nil) -> Processor {
         return Processor(
-            workingStack: workingStack + [value],
-            returnStack: returnStack
+            memory: memory ?? self.memory,
+            workingStack: workingStack ?? self.workingStack,
+            returnStack: returnStack ?? self.returnStack
+        )
+    }
+    
+    func push(_ value: UInt8) -> Processor {
+        return self.with(
+            workingStack: workingStack + [value]
         )
     }
     
@@ -144,9 +245,8 @@ struct Processor {
         let a = workingStack.last!
         return UnaryOperationInProgress(
             a: a,
-            processor: Processor(
-                workingStack: workingStack.dropLast(),
-                returnStack: returnStack
+            processor: self.with(
+                workingStack: workingStack.dropLast()
             )
         )
     }
@@ -181,6 +281,14 @@ struct Processor {
             return self.pop().pop().apply23( { a, b in (a, b, a) } ).push().push().push()
         case .sth:
             return self.pop().apply11( { a in a } ).push(.returnStack)
+        case .ldz:
+            return self.pop().apply11( { a in self.memory.read(a) } ).push()
+        case .stz:
+            return self
+                .pop().pop()
+                .apply( { op in
+                    op.processor.with(memory: op.processor.memory.write(op.b, op.a))
+                } )
         }
     }
 }
@@ -194,9 +302,8 @@ struct UnaryOperationInProgress {
         return BinaryOperationInProgress(
             a: b,
             b: a,
-            processor: Processor(
-                workingStack: processor.workingStack.dropLast(),
-                returnStack: processor.returnStack
+            processor: processor.with(
+                workingStack: processor.workingStack.dropLast()
             )
         )
     }
@@ -214,6 +321,10 @@ struct BinaryOperationInProgress {
     let a: UInt8
     let b: UInt8
     let processor: Processor
+    
+    func apply(_ operation: (BinaryOperationInProgress) -> Processor) -> Processor {
+        return operation(self)
+    }
     
     func apply21(_ operation: (UInt8, UInt8) -> UInt8) -> OperationUnaryResult {
         return OperationUnaryResult(
@@ -246,9 +357,8 @@ struct BinaryOperationInProgress {
             a: c,
             b: a,
             c: b,
-            processor: Processor(
-                workingStack: processor.workingStack.dropLast(),
-                returnStack: processor.returnStack
+            processor: processor.with(
+                workingStack: processor.workingStack.dropLast()
             )
         )
     }
@@ -278,13 +388,11 @@ struct OperationUnaryResult {
     func push(_ stack: Stack = .workingStack) -> Processor {
         switch stack {
         case .workingStack:
-            return Processor(
-                workingStack: processor.workingStack + [result],
-                returnStack: processor.returnStack
+            return processor.with(
+                workingStack: processor.workingStack + [result]
             )
         case .returnStack:
-            return Processor(
-                workingStack: processor.workingStack,
+            return processor.with(
                 returnStack: processor.returnStack + [result]
             )
         }
@@ -301,9 +409,8 @@ struct OperationTernaryResult {
         return OperationBinaryResult(
             resultA: resultB,
             resultB: resultC,
-            processor: Processor (
-                workingStack: processor.workingStack + [resultA],
-                returnStack: processor.returnStack
+            processor: processor.with (
+                workingStack: processor.workingStack + [resultA]
             )
         )
     }
@@ -317,9 +424,8 @@ struct OperationBinaryResult {
     func push() -> OperationUnaryResult {
         return OperationUnaryResult(
             result: resultB,
-            processor: Processor (
-                workingStack: processor.workingStack + [resultA],
-                returnStack: processor.returnStack
+            processor: processor.with (
+                workingStack: processor.workingStack + [resultA]
             )
         )
     }
