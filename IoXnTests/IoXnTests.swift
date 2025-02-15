@@ -42,6 +42,12 @@ struct IoXnTests {
             Processor().push(12).push(0).opcode(.div).pop().a
         ).to(equal(0))
     }
+    
+    @Test func opcodeRot() async throws {
+        let processor = Processor().push(1).push(2).push(3).opcode(.rot)
+        expect(processor.workingStack).to(equal([2, 3, 1]))
+    }
+
 }
 
 enum Opcode {
@@ -49,6 +55,7 @@ enum Opcode {
     case sub
     case mul
     case div
+    case rot
 }
 
 struct Processor {
@@ -83,13 +90,17 @@ struct Processor {
         case .add:
             return self.pop().pop().apply(&+).push()
         case .sub:
-            return self.pop().pop().swap().apply(&-).push()
+            return self.pop().pop().apply(&-).push()
         case .mul:
             return self.pop().pop().apply(&*).push()
         case .div:
-            return self.pop().pop().swap().apply(
+            return self.pop().pop().apply(
                 { a, b in b == 0 ? 0 : a / b}
             ).push()
+        case .rot:
+            return self.pop().pop().pop().apply({
+                a, b, c in (b, c, a)
+            }).push().push().push()
         }
     }
 }
@@ -101,8 +112,8 @@ struct UnaryOperationInProgress {
     func pop() -> BinaryOperationInProgress {
         let b = processor.workingStack.last!
         return BinaryOperationInProgress(
-            a: a,
-            b: b,
+            a: b,
+            b: a,
             processor: Processor(
                 workingStack: processor.workingStack.dropLast(),
                 returnStack: processor.returnStack
@@ -116,8 +127,8 @@ struct BinaryOperationInProgress {
     let b: UInt8
     let processor: Processor
     
-    func apply(_ operation: (UInt8, UInt8) -> UInt8) -> OperationResult {
-        return OperationResult(
+    func apply(_ operation: (UInt8, UInt8) -> UInt8) -> OperationUnaryResult {
+        return OperationUnaryResult(
             result: operation(a, b),
             processor: processor
         )
@@ -130,9 +141,39 @@ struct BinaryOperationInProgress {
             processor: processor
         )
     }
+    
+    func pop() -> TernaryOperationInProgress {
+        let c = processor.workingStack.last!
+        return TernaryOperationInProgress(
+            a: c,
+            b: a,
+            c: b,
+            processor: Processor(
+                workingStack: processor.workingStack.dropLast(),
+                returnStack: processor.returnStack
+            )
+        )
+    }
 }
 
-struct OperationResult {
+struct TernaryOperationInProgress {
+    let a: UInt8
+    let b: UInt8
+    let c: UInt8
+    let processor: Processor
+    
+    func apply(_ operation: (UInt8, UInt8, UInt8) -> (UInt8, UInt8, UInt8)) -> OperationTernaryResult {
+        let (resultA, resultB, resultC) = operation(a, b, c)
+        return OperationTernaryResult(
+            resultA: resultA,
+            resultB: resultB,
+            resultC: resultC,
+            processor: processor
+        )
+    }
+}
+
+struct OperationUnaryResult {
     let result: UInt8
     let processor: Processor
     
@@ -140,6 +181,40 @@ struct OperationResult {
         return Processor(
             workingStack: processor.workingStack + [result],
             returnStack: processor.returnStack
+        )
+    }
+}
+
+struct OperationTernaryResult {
+    let resultA: UInt8
+    let resultB: UInt8
+    let resultC: UInt8
+    let processor: Processor
+    
+    func push() -> OperationBinaryResult {
+        return OperationBinaryResult(
+            resultA: resultB,
+            resultB: resultC,
+            processor: Processor (
+                workingStack: processor.workingStack + [resultA],
+                returnStack: processor.returnStack
+            )
+        )
+    }
+}
+
+struct OperationBinaryResult {
+    let resultA: UInt8
+    let resultB: UInt8
+    let processor: Processor
+    
+    func push() -> OperationUnaryResult {
+        return OperationUnaryResult(
+            result: resultB,
+            processor: Processor (
+                workingStack: processor.workingStack + [resultA],
+                returnStack: processor.returnStack
+            )
         )
     }
 }
