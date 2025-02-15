@@ -3,51 +3,83 @@ import Nimble
 @testable import IoXn
 
 struct IoXnTests {
-
+    
     @Test func opcodeAdd() async throws {
         expect(
-            Processor().push(1).push(2).opcode(.add).pop().a
-        ).to(equal(3))
+            Processor()
+                .push(1)
+                .push(2)
+                .opcode(.add)
+                .workingStack).to(equal([3]))
         expect(
-            Processor().push(255).push(1).opcode(.add).pop().a
-        ).to(equal(0))
+            Processor()
+                .push(255)
+                .push(1)
+                .opcode(.add)
+                .workingStack).to(equal([0]))
     }
     
     @Test func opcodeSub() async throws {
         expect(
-            Processor().push(2).push(1).opcode(.sub).pop().a
-        ).to(equal(1))
+            Processor()
+                .push(2)
+                .push(1)
+                .opcode(.sub)
+                .workingStack).to(equal([1]))
         expect(
-            Processor().push(1).push(2).opcode(.sub).pop().a
-        ).to(equal(255))
+            Processor()
+                .push(1)
+                .push(2)
+                .opcode(.sub)
+                .workingStack).to(equal([255]))
     }
     
     @Test func opcodeMul() async throws {
         expect(
-            Processor().push(2).push(2).opcode(.mul).pop().a
-        ).to(equal(4))
+            Processor()
+                .push(2)
+                .push(2)
+                .opcode(.mul)
+                .workingStack).to(equal([4]))
+        
         expect(
-            Processor().push(130).push(2).opcode(.mul).pop().a
-        ).to(equal(4))
+            Processor()
+                .push(130)
+                .push(2)
+                .opcode(.mul)
+                .workingStack).to(equal([4]))
     }
     
     @Test func opcodeDiv() async throws {
         expect(
-            Processor().push(6).push(2).opcode(.div).pop().a
-        ).to(equal(3))
+            Processor()
+                .push(6)
+                .push(2)
+                .opcode(.div)
+                .workingStack).to(equal([3]))
         expect(
-            Processor().push(255).push(2).opcode(.div).pop().a
-        ).to(equal(127))
+            Processor()
+                .push(255)
+                .push(2)
+                .opcode(.div)
+                .workingStack).to(equal([127]))
         expect(
-            Processor().push(12).push(0).opcode(.div).pop().a
-        ).to(equal(0))
+            Processor()
+                .push(12)
+                .push(0)
+                .opcode(.div)
+                .workingStack).to(equal([0]))
     }
     
     @Test func opcodeRot() async throws {
-        let processor = Processor().push(1).push(2).push(3).opcode(.rot)
-        expect(processor.workingStack).to(equal([2, 3, 1]))
+        expect(
+            Processor()
+                .push(1)
+                .push(2)
+                .push(3)
+                .opcode(.rot)
+                .workingStack).to(equal([2, 3, 1]))
     }
-
 }
 
 enum Opcode {
