@@ -171,7 +171,7 @@ struct IoXnProgramCounterTests {
             .opcode(.jmp)
        ).to(equal(Processor().with(
             programCounter: 12045
-        )))
+       )))
         
         expect(Processor().with(programCounter: 12043)
             .push(0 &- 2)
@@ -179,6 +179,21 @@ struct IoXnProgramCounterTests {
        ).to(equal(Processor().with(
             programCounter: 12041
         )))
+    }
+    @Test func opcodeJcn() async throws {
+        expect(Processor().with(programCounter: 12043)
+            .push(5)
+            .push(2)
+            .opcode(.jcn)
+        ).to(equal(Processor().with(
+            programCounter: 12045
+        )))
+        
+        expect(Processor().with(programCounter: 12043)
+            .push(0)
+            .push(2)
+            .opcode(.jcn).programCounter
+        ).to(equal(12043))
     }
 }
 
@@ -194,6 +209,7 @@ enum Opcode {
     case ldz
     case stz
     case jmp
+    case jcn
 }
 
 enum Stack {
@@ -240,17 +256,18 @@ struct Processor : Equatable {
     let memory: Memory
     let workingStack: [UInt8]
     let returnStack: [UInt8]
-    let programeCounter: UInt16
+    let programCounter: UInt16
     
     private init(
         memory: Memory = Memory(),
         workingStack: [UInt8] = [],
-        returnStack: [UInt8] = []
+        returnStack: [UInt8] = [],
+        programCounter: UInt16 = 0x100
     ) {
         self.memory = memory
         self.workingStack = workingStack
         self.returnStack = returnStack
-        self.programeCounter = 0x100
+        self.programCounter = programCounter
     }
     
     init() {
@@ -266,7 +283,8 @@ struct Processor : Equatable {
         return Processor(
             memory: memory ?? self.memory,
             workingStack: workingStack ?? self.workingStack,
-            returnStack: returnStack ?? self.returnStack
+            returnStack: returnStack ?? self.returnStack,
+            programCounter: programCounter ?? self.programCounter
         )
     }
     
@@ -327,10 +345,18 @@ struct Processor : Equatable {
         case .jmp:
             return self
                 .pop()
-                .apply( { op in op.processor.with(
-                    programCounter: op.processor.programeCounter &+ UInt16(op.a)
-                )})
+                .apply( { op in jump(op.processor, offset: op.a) } )
+        case .jcn:
+            return self
+                .pop().pop()
+                .apply( { op in op.a != 0
+                    ? jump(op.processor, offset: op.b)
+                    : op.processor
+                })
         }
+    }
+    private func jump(_ processor: Processor, offset: UInt8) -> Processor {
+        processor.with(programCounter: programCounter &+ UInt16(offset))
     }
 }
 
