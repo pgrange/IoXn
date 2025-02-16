@@ -195,6 +195,22 @@ struct IoXnProgramCounterTests {
             .opcode(.jcn).programCounter
         ).to(equal(12043))
     }
+    
+    @Test func opcodeJsr() async throws {
+        expect(Processor().with(programCounter: 12043)
+            .push(5)
+            .opcode(.jsr)
+        ).to(equal(Processor().with(
+            programCounter: 12048,
+            returnStack: oneWordAsTowBytes(12043)
+        )))
+    }
+}
+
+func oneWordAsTowBytes(_ value: UInt16) -> [UInt8] {
+    let highByte: UInt8 = UInt8((value & 0xFF00) >> 8)
+    let lowByte: UInt8 = UInt8(value & 0x00FF)
+    return [highByte, lowByte]
 }
 
 enum Opcode {
@@ -210,6 +226,7 @@ enum Opcode {
     case stz
     case jmp
     case jcn
+    case jsr
 }
 
 enum Stack {
@@ -353,6 +370,11 @@ struct Processor : Equatable {
                     ? jump(op.processor, offset: op.b)
                     : op.processor
                 })
+        case .jsr:
+            return self.pop().apply( { op in
+                jump(op.processor, offset: op.a)
+                    .with(returnStack: returnStack + oneWordAsTowBytes(op.processor.programCounter))
+            } )
         }
     }
     private func jump(_ processor: Processor, offset: UInt8) -> Processor {
