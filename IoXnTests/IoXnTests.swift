@@ -89,6 +89,15 @@ struct IoXnArithemticTests {
             workingStack: [0]
         )))
     }
+    
+    @Test func opcodeInc() async throws {
+        expect(Processor()
+            .push(6)
+            .opcode(.inc)
+        ).to(equal(Processor().with(
+            workingStack: [7]
+        )))
+    }
 }
 
 struct IoXnStackTests {
@@ -214,6 +223,7 @@ func oneWordAsTowBytes(_ value: UInt16) -> [UInt8] {
 }
 
 enum Opcode {
+    case inc
     case add
     case sub
     case mul
@@ -331,6 +341,8 @@ struct Processor : Equatable {
     
     func opcode(_ opcode: Opcode) -> Processor {
         switch opcode {
+        case .inc:
+            return self.pop().apply11({ a in a + 1}).push()
         case .add:
             return self.pop().pop().apply21(&+).push()
         case .sub:
