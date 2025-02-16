@@ -10,6 +10,38 @@ import Nimble
 
 struct IoXnArithemticTests {
     
+    @Test func opcodeInc() async throws {
+        expect(Processor()
+            .push(6)
+            .opcode(.inc)
+        ).to(equal(Processor().with(
+            workingStack: [7]
+        )))
+        
+        expect(Processor()
+            .push(6)
+            .opcode(.inck)
+        ).to(equal(Processor().with(
+            workingStack: [6, 7]
+        )))
+        
+        expect(Processor()
+            .push(6)
+            .push(255)
+            .opcode(.inc2)
+        ).to(equal(Processor().with(
+            workingStack: oneWordAsByteArray(1792)
+        )))
+        
+        expect(Processor()
+            .push(6)
+            .push(255)
+            .opcode(.inc2k)
+        ).to(equal(Processor().with(
+            workingStack: [6, 255] + oneWordAsByteArray(1792)
+        )))
+    }
+    
     @Test func opcodeAdd() async throws {
         expect(Processor()
             .push(1)
@@ -87,15 +119,6 @@ struct IoXnArithemticTests {
             .opcode(.div)
         ).to(equal(Processor().with(
             workingStack: [0]
-        )))
-    }
-    
-    @Test func opcodeInc() async throws {
-        expect(Processor()
-            .push(6)
-            .opcode(.inc)
-        ).to(equal(Processor().with(
-            workingStack: [7]
         )))
     }
 }
@@ -211,19 +234,32 @@ struct IoXnProgramCounterTests {
             .opcode(.jsr)
         ).to(equal(Processor().with(
             programCounter: 12048,
-            returnStack: oneWordAsTowBytes(12043)
+            returnStack: oneWordAsByteArray(12043)
         )))
     }
 }
 
-func oneWordAsTowBytes(_ value: UInt16) -> [UInt8] {
+func oneWordAsByteArray(_ value: UInt16) -> [UInt8] {
     let highByte: UInt8 = UInt8((value & 0xFF00) >> 8)
     let lowByte: UInt8 = UInt8(value & 0x00FF)
     return [highByte, lowByte]
 }
 
+func oneWordAsTwoBytes(_ value: UInt16) -> (UInt8, UInt8) {
+    let highByte: UInt8 = UInt8((value & 0xFF00) >> 8)
+    let lowByte: UInt8 = UInt8(value & 0x00FF)
+    return (highByte, lowByte)
+}
+
+func twoBytesAsOneWord(_ highByte: UInt8, _ lowByte: UInt8) -> UInt16 {
+    return UInt16(highByte) << 8 | UInt16(lowByte)
+}
+
 enum Opcode {
     case inc
+    case inck
+    case inc2
+    case inc2k
     case add
     case sub
     case mul
@@ -331,18 +367,19 @@ struct Processor : Equatable {
         )
     }
     
-    func peek() -> UnaryOperationInProgress {
-        let a = workingStack.last!
-        return UnaryOperationInProgress(
-            a: a,
-            processor: self
-        )
-    }
-    
     func opcode(_ opcode: Opcode) -> Processor {
         switch opcode {
         case .inc:
             return self.pop().apply11({ a in a + 1}).push()
+        case .inck:
+            return self.pop().apply12({ a in (a, a + 1) }).push().push()
+        case .inc2:
+            return self.pop().pop().apply22({ a, b in oneWordAsTwoBytes(twoBytesAsOneWord(a, b) &+ 1) }).push().push()
+        case .inc2k:
+            return self.pop().pop().apply24({ a, b in
+                let result = oneWordAsTwoBytes(twoBytesAsOneWord(a, b) &+ 1)
+                return (a, b, result.0, result.1) })
+            .push().push().push().push()
         case .add:
             return self.pop().pop().apply21(&+).push()
         case .sub:
@@ -358,7 +395,7 @@ struct Processor : Equatable {
                 a, b, c in (b, c, a)
             }).push().push().push()
         case .dup:
-            return self.peek().apply11( { a in a } ).push()
+            return self.pop().apply12( { a in (a, a) } ).push().push()
         case .ovr:
             return self.pop().pop().apply23( { a, b in (a, b, a) } ).push().push().push()
         case .sth:
@@ -385,7 +422,7 @@ struct Processor : Equatable {
         case .jsr:
             return self.pop().apply( { op in
                 jump(op.processor, offset: op.a)
-                    .with(returnStack: returnStack + oneWordAsTowBytes(op.processor.programCounter))
+                    .with(returnStack: returnStack + oneWordAsByteArray(op.processor.programCounter))
             } )
         }
     }
@@ -413,6 +450,16 @@ struct UnaryOperationInProgress {
         )
     }
     
+    func peek() -> BinaryOperationInProgress {
+        let b = processor.workingStack.last!
+        return BinaryOperationInProgress(
+            a: b,
+            b: a,
+            processor: processor
+        )
+    }
+
+    
     func apply(_ operation: (UnaryOperationInProgress) -> Processor) -> Processor {
         return operation(self)
     }
@@ -420,6 +467,16 @@ struct UnaryOperationInProgress {
     func apply11(_ operation: (UInt8) -> UInt8) -> OperationUnaryResult {
         return OperationUnaryResult(
             result: operation(a),
+            processor: processor
+        )
+    }
+    
+    func apply12(_ operation: (UInt8) -> (UInt8, UInt8)) -> OperationBinaryResult {
+        let (resultA, resultB) = operation(a)
+        
+        return OperationBinaryResult(
+            resultA: resultA,
+            resultB: resultB,
             processor: processor
         )
     }
@@ -440,6 +497,15 @@ struct BinaryOperationInProgress {
             processor: processor
         )
     }
+
+    func apply22(_ operation: (UInt8, UInt8) -> (UInt8, UInt8)) -> OperationBinaryResult {
+        let (resultA, resultB) = operation(a, b)
+        return OperationBinaryResult(
+            resultA: resultA,
+            resultB: resultB,
+            processor: processor
+        )
+    }
     
     func apply23(_ operation: (UInt8, UInt8) -> (UInt8, UInt8, UInt8)) -> OperationTernaryResult {
         let (a, b, c) = operation(a, b)
@@ -450,7 +516,19 @@ struct BinaryOperationInProgress {
             processor: processor
         )
     }
-    
+
+    func apply24(_ operation: (UInt8, UInt8) -> (UInt8, UInt8, UInt8, UInt8)) -> OperationQuaternaryResult {
+        let (a, b, c, d) = operation(a, b)
+        return OperationQuaternaryResult(
+            resultA: a,
+            resultB: b,
+            resultC: c,
+            resultD: d,
+            processor: processor
+        )
+    }
+
+                
     func swap() -> BinaryOperationInProgress {
         return BinaryOperationInProgress(
             a: b,
@@ -538,3 +616,23 @@ struct OperationBinaryResult {
         )
     }
 }
+                                            
+struct OperationQuaternaryResult {
+    let resultA: UInt8
+    let resultB: UInt8
+    let resultC: UInt8
+    let resultD: UInt8
+    let processor: Processor
+
+    func push() -> OperationTernaryResult {
+        return OperationTernaryResult(
+            resultA: resultB,
+            resultB: resultC,
+            resultC: resultD,
+            processor: processor.with (
+                workingStack: processor.workingStack + [resultA]
+            )
+        )
+    }
+}
+
