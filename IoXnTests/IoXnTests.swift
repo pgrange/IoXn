@@ -378,7 +378,11 @@ struct Processor : Equatable {
         }
     }
     private func jump(_ processor: Processor, offset: UInt8) -> Processor {
-        processor.with(programCounter: programCounter &+ UInt16(offset))
+        let offsetAsUInt16: UInt16 = offset < 128
+        ? UInt16(offset)
+        : UInt16(offset) | 0xFF00
+        
+        return processor.with(programCounter: programCounter &+ offsetAsUInt16)
     }
 }
 
