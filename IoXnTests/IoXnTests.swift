@@ -367,6 +367,17 @@ struct Processor : Equatable {
         )
     }
     
+    func pop2() -> UnaryWordOperationInProgress {
+        let suffix = workingStack.suffix(2)
+        let a = twoBytesAsOneWord(suffix[0], suffix[1])
+        return UnaryWordOperationInProgress(
+            a: a,
+            processor: self.with(
+                workingStack: workingStack.dropLast(2)
+            )
+        )
+    }
+    
     func opcode(_ opcode: Opcode) -> Processor {
         switch opcode {
         case .inc:
@@ -374,12 +385,9 @@ struct Processor : Equatable {
         case .inck:
             return self.pop().apply12({ a in (a, a + 1) }).push().push()
         case .inc2:
-            return self.pop().pop().apply22({ a, b in oneWordAsTwoBytes(twoBytesAsOneWord(a, b) &+ 1) }).push().push()
+            return self.pop2().apply11({ a in a &+ 1 }).push()
         case .inc2k:
-            return self.pop().pop().apply24({ a, b in
-                let result = oneWordAsTwoBytes(twoBytesAsOneWord(a, b) &+ 1)
-                return (a, b, result.0, result.1) })
-            .push().push().push().push()
+            return self.pop2().apply12({ a in (a, a &+ 1) }).push().push()
         case .add:
             return self.pop().pop().apply21(&+).push()
         case .sub:
@@ -450,16 +458,6 @@ struct UnaryOperationInProgress {
         )
     }
     
-    func peek() -> BinaryOperationInProgress {
-        let b = processor.workingStack.last!
-        return BinaryOperationInProgress(
-            a: b,
-            b: a,
-            processor: processor
-        )
-    }
-
-    
     func apply(_ operation: (UnaryOperationInProgress) -> Processor) -> Processor {
         return operation(self)
     }
@@ -475,6 +473,39 @@ struct UnaryOperationInProgress {
         let (resultA, resultB) = operation(a)
         
         return OperationBinaryResult(
+            resultA: resultA,
+            resultB: resultB,
+            processor: processor
+        )
+    }
+}
+
+struct UnaryWordOperationInProgress {
+    let a: UInt16
+    let processor: Processor
+    
+    func pop() -> BinaryWordOperationInProgress {
+        let newStack = processor.workingStack
+        let b = twoBytesAsOneWord(newStack.dropLast().last!, newStack.dropLast().last!)
+        return BinaryWordOperationInProgress(
+            a: b,
+            b: a,
+            processor: processor.with(
+                workingStack: processor.workingStack.dropLast()
+            )
+        )
+    }
+    
+    func apply11(_ operation: (UInt16) -> UInt16) -> WordOperationUnaryResult {
+        return WordOperationUnaryResult(
+            result: operation(a),
+            processor: processor
+        )
+    }
+
+    func apply12(_ operation: (UInt16) -> (UInt16, UInt16)) -> WordOperationBinaryResult {
+        let (resultA, resultB) = operation(a)
+        return WordOperationBinaryResult(
             resultA: resultA,
             resultB: resultB,
             processor: processor
@@ -550,6 +581,12 @@ struct BinaryOperationInProgress {
     }
 }
 
+struct BinaryWordOperationInProgress {
+    let a: UInt16
+    let b: UInt16
+    let processor: Processor
+}
+
 struct TernaryOperationInProgress {
     let a: UInt8
     let b: UInt8
@@ -582,6 +619,39 @@ struct OperationUnaryResult {
                 returnStack: processor.returnStack + [result]
             )
         }
+    }
+}
+
+struct WordOperationUnaryResult {
+    let result: UInt16
+    let processor: Processor
+    
+    func push(_ stack: Stack = .workingStack) -> Processor {
+        switch stack {
+        case .workingStack:
+            return processor.with(
+                workingStack: processor.workingStack + oneWordAsByteArray(result)
+            )
+        case .returnStack:
+            return processor.with(
+                returnStack: processor.returnStack + oneWordAsByteArray(result)
+            )
+        }
+    }
+}
+
+struct WordOperationBinaryResult {
+    let resultA: UInt16
+    let resultB: UInt16
+    let processor: Processor
+    
+    func push() -> WordOperationUnaryResult {
+        return WordOperationUnaryResult(
+            result: resultB,
+            processor: processor.with(
+                workingStack: processor.workingStack + oneWordAsByteArray(resultA)
+            )
+        )
     }
 }
 
