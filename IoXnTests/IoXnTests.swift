@@ -125,6 +125,36 @@ struct IoXnArithemticTests {
 
 struct IoXnStackTests {
     
+    @Test func opcodePop() async throws {
+        expect(Processor()
+            .push(1)
+            .push(2)
+            .push(3)
+            .opcode(.pop)
+        ).to(equal(Processor().with(
+            workingStack: [1, 2]
+        )))
+
+        expect(Processor()
+            .push(1)
+            .push(2)
+            .push(3)
+            .opcode(.popk)
+        ).to(equal(Processor().with(
+            workingStack: [1, 2, 3]
+        )))
+
+        
+        expect(Processor()
+            .push(1)
+            .push(2)
+            .push(3)
+            .opcode(.pop2)
+        ).to(equal(Processor().with(
+            workingStack: [1]
+        )))
+    }
+    
     @Test func opcodeRot() async throws {
         let result = Processor()
             .push(1)
@@ -281,6 +311,10 @@ enum Opcode {
     case inck
     case inc2
     case inc2k
+    case pop
+    case popk
+    case pop2
+    
     case add
     case sub
     case mul
@@ -403,6 +437,14 @@ struct Processor : Equatable {
         return Instruction<N>(self).pop().apply12({ a in (a, a &+ inc) }).push().push()
     }
     
+    private func pop<N: Operand>(_ mark: N.Type) -> Processor {
+        return Instruction<N>(self).pop().drop()
+    }
+
+    private func popk<N: Operand>(_ mark: N.Type) -> Processor {
+        return Instruction<N>(self).pop().apply11({a in a}).push()
+    }
+
     private func add<N: Operand>(_ mark: N.Type) -> Processor {
         return Instruction<N>(self).pop().pop().apply21(&+).push()
     }
@@ -464,6 +506,12 @@ struct Processor : Equatable {
             return inck(UInt8.self)
         case .inc2k:
             return inck(UInt16.self)
+        case .pop:
+            return pop(UInt8.self)
+        case .popk:
+            return popk(UInt8.self)
+        case .pop2:
+            return pop(UInt16.self)
         case .add:
             return add(UInt8.self)
         case .sub:
@@ -562,6 +610,10 @@ struct UnaryOperationInProgress<n: Operand> {
                 workingStack: processor.workingStack.dropLast(size)
             )
         )
+    }
+    
+    func drop() -> Processor {
+        return processor
     }
     
     func apply(_ operation: (UnaryOperationInProgress<n>) -> Processor) -> Processor {
