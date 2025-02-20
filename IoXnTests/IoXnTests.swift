@@ -422,8 +422,26 @@ struct Processor : Equatable {
     }
     
     func push(_ value: UInt8) -> Processor {
-        return self.with(
-            workingStack: workingStack + [value]
+        return push([value])
+    }
+    
+    func push(_ value: [UInt8], _ stack: Stack = .workingStack) -> Processor {
+        switch stack {
+        case .workingStack:
+            return self.with(
+                workingStack: workingStack + value
+            )
+        case .returnStack:
+            return self.with(
+                returnStack: returnStack + value
+            )
+        }
+    }
+    
+    func pop(_ size: Int = 1) -> ([UInt8], Self) {
+        return (
+            workingStack.suffix(size),
+            self.with(workingStack: workingStack.dropLast(size))
         )
     }
     
@@ -564,51 +582,42 @@ struct Processor : Equatable {
     }
 }
 
-struct Instruction<n: Operand> {
+struct Instruction<N: Operand> {
     let processor: Processor
     
     init(_ processor: Processor) {
         self.processor = processor
     }
     
-    func pop() -> UnaryOperationInProgress<n> {
-        let size = n.sizeInBytes
-        let suffix: [UInt8] = processor.workingStack.suffix(size)
-        let a: n = .fromByteArray(suffix)
+    func pop() -> UnaryOperationInProgress<N> {
+        let (a, nextProcessor) = processor.pop(N.sizeInBytes)
         return UnaryOperationInProgress(
-            a: a,
-            processor: processor.with(
-                workingStack: processor.workingStack.dropLast(size)
-            )
+            a: .fromByteArray(a),
+            processor: nextProcessor
         )
     }
     
-    func popByte() -> UnaryOperationInProgress<n> {
-        let a: n = n(processor.workingStack.last!)
+    func popByte() -> UnaryOperationInProgress<N> {
+        let (head, nextProcessor) = processor.pop()
+        let a: UInt8 = .fromByteArray(head)
         return UnaryOperationInProgress(
-            a: a,
-            processor: processor.with(
-                workingStack: processor.workingStack.dropLast()
-            )
+            a: N(a),
+            processor: nextProcessor
         )
     }
 
 }
 
-struct UnaryOperationInProgress<n: Operand> {
-    let a: n
+struct UnaryOperationInProgress<N: Operand> {
+    let a: N
     let processor: Processor
     
-    func pop() -> BinaryOperationInProgress<n> {
-        let size = n.sizeInBytes
-        let suffix: [UInt8] = processor.workingStack.suffix(size)
-        let b: n = .fromByteArray(suffix)
+    func pop() -> BinaryOperationInProgress<N> {
+        let (b, nextProcessor) = processor.pop(N.sizeInBytes)
         return BinaryOperationInProgress(
-            a: b,
+            a: .fromByteArray(b),
             b: a,
-            processor: processor.with(
-                workingStack: processor.workingStack.dropLast(size)
-            )
+            processor: nextProcessor
         )
     }
     
@@ -616,18 +625,18 @@ struct UnaryOperationInProgress<n: Operand> {
         return processor
     }
     
-    func apply(_ operation: (UnaryOperationInProgress<n>) -> Processor) -> Processor {
+    func apply(_ operation: (UnaryOperationInProgress<N>) -> Processor) -> Processor {
         return operation(self)
     }
     
-    func apply11(_ operation: (n) -> n) -> OperationUnaryResult<n> {
-        return OperationUnaryResult<n>(
+    func apply11(_ operation: (N) -> N) -> OperationUnaryResult<N> {
+        return OperationUnaryResult<N>(
             result: operation(a),
             processor: processor
         )
     }
 
-    func apply12(_ operation: (n) -> (n, n)) -> OperationBinaryResult<n> {
+    func apply12(_ operation: (N) -> (N, N)) -> OperationBinaryResult<N> {
         let (resultA, resultB) = operation(a)
         return OperationBinaryResult(
             resultA: resultA,
@@ -643,16 +652,12 @@ struct BinaryOperationInProgress<N: Operand> {
     let processor: Processor
     
     func pop() -> TernaryOperationInProgress<N> {
-        let size = N.sizeInBytes
-        let suffix: [UInt8] = processor.workingStack.suffix(size)
-        let c: N = .fromByteArray(suffix)
+        let (c, nextProcessor) = processor.pop(N.sizeInBytes)
         return TernaryOperationInProgress(
-            a: c,
+            a: .fromByteArray(c),
             b: a,
             c: b,
-            processor: processor.with(
-                workingStack: processor.workingStack.dropLast(size)
-            )
+            processor: nextProcessor
         )
     }
     
@@ -695,35 +700,24 @@ struct TernaryOperationInProgress<N: Operand> {
     }
 }
 
-struct OperationUnaryResult<n: Operand> {
-    let result: n
+struct OperationUnaryResult<N: Operand> {
+    let result: N
     let processor: Processor
     
     func push(_ stack: Stack = .workingStack) -> Processor {
-        switch stack {
-        case .workingStack:
-            return processor.with(
-                workingStack: processor.workingStack + result.toByteArray()
-            )
-        case .returnStack:
-            return processor.with(
-                returnStack: processor.returnStack + result.toByteArray()
-            )
-        }
+        return processor.push(result.toByteArray(), stack)
     }
 }
 
-struct OperationBinaryResult<n: Operand> {
-    let resultA: n
-    let resultB: n
+struct OperationBinaryResult<N: Operand> {
+    let resultA: N
+    let resultB: N
     let processor: Processor
     
-    func push() -> OperationUnaryResult<n> {
+    func push() -> OperationUnaryResult<N> {
         return OperationUnaryResult(
             result: resultB,
-            processor: processor.with(
-                workingStack: processor.workingStack + resultA.toByteArray()
-            )
+            processor: processor.push(resultA.toByteArray())
         )
     }
 }
@@ -738,9 +732,7 @@ struct OperationTernaryResult<N: Operand> {
         return OperationBinaryResult(
             resultA: resultB,
             resultB: resultC,
-            processor: processor.with (
-                workingStack: processor.workingStack + resultA.toByteArray()
-            )
+            processor: processor.push(resultA.toByteArray())
         )
     }
 }
