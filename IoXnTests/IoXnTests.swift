@@ -143,7 +143,6 @@ struct IoXnStackTests {
         ).to(equal(Processor().with(
             workingStack: [1, 2, 3]
         )))
-
         
         expect(Processor()
             .push(1)
@@ -153,6 +152,16 @@ struct IoXnStackTests {
         ).to(equal(Processor().with(
             workingStack: [1]
         )))
+        
+        expect(Processor()
+            .push(1, .returnStack)
+            .push(2, .returnStack)
+            .push(3, .returnStack)
+            .opcode(.pop2kr)
+        ).to(equal(Processor().with(
+            returnStack: [1, 2, 3]
+        )))
+
     }
     
     @Test func opcodeRot() async throws {
@@ -324,6 +333,7 @@ enum Opcode {
     case pop
     case popk
     case pop2
+    case pop2kr
     
     case add
     case sub
@@ -437,7 +447,7 @@ struct Processor : Equatable {
     }
     
     func push(_ value: UInt8,_ stack: Stack = .workingStack) -> Processor {
-        return push([value])
+        return push([value], stack)
     }
     
     func push(_ value: [UInt8], _ stack: Stack = .workingStack) -> Processor {
@@ -460,8 +470,8 @@ struct Processor : Equatable {
             self.with(workingStack: workingStack.dropLast(size))
         )
         case .returnStack: (
-            workingStack.suffix(size),
-            self.with(workingStack: workingStack.dropLast(size))
+            returnStack.suffix(size),
+            self.with(returnStack: returnStack.dropLast(size))
         )
         }
     }
@@ -471,17 +481,8 @@ struct Processor : Equatable {
         return instruction.pop().apply11({ a in a &+ inc}).push()
     }
     
-    private func inck<N: Operand>(_ instruction: Instruction<N>) -> Processor {
-        let inc: N = .fromByteArray([UInt8](repeating: 0, count: N.sizeInBytes - 1) + [1])
-        return instruction.pop().apply12({ a in (a, a &+ inc) }).push().push()
-    }
-    
-    private func pop<N: Operand>(_ mark: N.Type) -> Processor {
-        return Instruction<N>(self).pop().drop()
-    }
-
-    private func popk<N: Operand>(_ mark: N.Type) -> Processor {
-        return Instruction<N>(self).pop().apply11({a in a}).push()
+    private func pop<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        return instruction.pop().drop()
     }
 
     private func add<N: Operand>(_ mark: N.Type) -> Processor {
@@ -544,19 +545,21 @@ struct Processor : Equatable {
         case .inc2r:
             return inc(Instruction<UInt16>(self, reverseStack: true))
         case .inck:
-            return inck(Instruction<UInt8>(self))
+            return inc(Instruction<UInt8>(self, keepStack: true))
         case .inckr:
-            return inck(Instruction<UInt8>(self, reverseStack: true))
+            return inc(Instruction<UInt8>(self, reverseStack: true, keepStack: true))
         case .inc2k:
-            return inck(Instruction<UInt16>(self))
+            return inc(Instruction<UInt16>(self, keepStack: true))
         case .inc2kr:
-            return inck(Instruction<UInt16>(self, reverseStack: true))
+            return inc(Instruction<UInt16>(self, reverseStack: true, keepStack: true))
         case .pop:
-            return pop(UInt8.self)
+            return pop(Instruction<UInt8>(self))
         case .popk:
-            return popk(UInt8.self)
+            return pop(Instruction<UInt8>(self, keepStack: true))
         case .pop2:
-            return pop(UInt16.self)
+            return pop(Instruction<UInt16>(self))
+        case .pop2kr:
+            return pop(Instruction<UInt16>(self, reverseStack: true, keepStack: true))
         case .add:
             return add(UInt8.self)
         case .sub:
@@ -611,40 +614,72 @@ struct Processor : Equatable {
 }
 
 struct InstructionState<N: Operand> {
-    let processor: Processor
-    let reverseStack: Bool
+    private let processor: Processor
+    private let reverseStack: Bool
+    private let keepStack: Bool
+    private let popped: [UInt8]
     
-    init(processor: Processor, reverseStack: Bool = false) {
+    var programCounter: UInt16 { processor.programCounter }
+    
+    init(processor: Processor, reverseStack: Bool = false, keepStack: Bool = false) {
+        self.init(processor: processor, reverseStack: reverseStack, keepStack: keepStack, popped: [])
+    }
+    
+    private init(processor: Processor, reverseStack: Bool, keepStack: Bool, popped: [UInt8]) {
         self.processor = processor
         self.reverseStack = reverseStack
+        self.keepStack = keepStack
+        self.popped = popped
     }
     
     private func with(
         processor: Processor? = nil,
-        reverseStack: Bool? = nil
+        popped: [UInt8]? = nil
     ) -> InstructionState {
         return InstructionState(
             processor: processor ?? self.processor,
-            reverseStack: reverseStack ?? self.reverseStack
+            reverseStack: reverseStack,
+            keepStack: keepStack,
+            popped: popped ?? self.popped
         )
     }
     
     func pop(_ stack: Stack = .workingStack) -> (N, InstructionState) {
-        let (value, nextProcessor) = processor.pop(N.sizeInBytes, realStack(stack))
-        return (.fromByteArray(value), with(processor: nextProcessor))
+        let (head, nextProcessor) = processor.pop(N.sizeInBytes, realStack(stack))
+        let value: N = .fromByteArray(head)
+        return (
+            value,
+            with(
+                processor: nextProcessor,
+                popped: popped + head.reversed()
+            )
+        )
     }
     
     func popByte(_ stack: Stack = .workingStack) -> (UInt8, InstructionState) {
-        let (value, nextProcessor) = processor.pop(1, realStack(stack))
-        return (.fromByteArray(value), with(processor: nextProcessor))
+        let (head, nextProcessor) = processor.pop(1, realStack(stack))
+        let value: UInt8 = .fromByteArray(head)
+        return (value, with(processor: nextProcessor, popped: popped + head))
     }
     
     func push(_ value: N, _ stack: Stack = .workingStack) -> InstructionState<N> {
-        return with(processor: processor.push(value.toByteArray(), realStack(stack)))
+        let nextProcessor = keepStack ? processor.push(popped.reversed(), realStack(stack)) : processor
+        return with(
+            processor: nextProcessor.push(value.toByteArray(), realStack(stack)),
+            popped: []
+        )
+    }
+    
+    func writeToMemory(_ address: UInt16, _ value: N) -> InstructionState<N> {
+        return with(processor: processor.with(memory: processor.memory.write(address, value, as: N.self)))
     }
     
     func jump(to pc: UInt16) -> InstructionState<N> {
         return with(processor: processor.with(programCounter: pc))
+    }
+    
+    func terminate() -> Processor {
+        return  keepStack ? processor.push(popped.reversed(), realStack(.workingStack)) : processor
     }
     
     private func realStack(_ stack: Stack) -> Stack {
@@ -655,8 +690,8 @@ struct InstructionState<N: Operand> {
 struct Instruction<N: Operand> {
     let state: InstructionState<N>
     
-    init(_ processor: Processor, reverseStack: Bool = false) {
-        self.state = InstructionState(processor: processor, reverseStack: reverseStack)
+    init(_ processor: Processor, reverseStack: Bool = false, keepStack: Bool = false) {
+        self.state = InstructionState(processor: processor, reverseStack: reverseStack, keepStack: keepStack)
     }
     
     func pop(_ stack: Stack = .workingStack) -> UnaryOperationInProgress<N> {
@@ -685,26 +720,20 @@ struct UnaryOperationInProgress<N: Operand> {
         return BinaryOperationInProgress(
             a: b,
             b: a,
-            processor: nextState.processor,
-            reverseStack: nextState.reverseStack,
             state: nextState
         )
     }
     
     func drop() -> Processor {
-        return state.processor
-    }
-    
-    func apply(_ operation: (UnaryOperationInProgress<N>) -> Processor) -> Processor {
-        return operation(self)
+        return state.terminate()
     }
     
     func applyProgramCounter(_ operation: (UInt16, N) -> UInt16) -> Processor {
-        state.jump(to: operation(state.processor.programCounter, a)).processor
+        state.jump(to: operation(state.programCounter, a)).terminate()
     }
 
     func applyProgramCounter11(_ operation: (UInt16, N) -> (UInt16, N)) -> OperationUnaryResult<N> {
-        let (pc, result) = operation(state.processor.programCounter, a)
+        let (pc, result) = operation(state.programCounter, a)
         return OperationUnaryResult<N>(
             result: N(result),
             state: state.jump(to: pc)
@@ -731,8 +760,6 @@ struct UnaryOperationInProgress<N: Operand> {
 struct BinaryOperationInProgress<N: Operand> {
     let a: N
     let b: N
-    let processor: Processor
-    let reverseStack: Bool
     let state: InstructionState<N>
     
     func pop() -> TernaryOperationInProgress<N> {
@@ -747,11 +774,12 @@ struct BinaryOperationInProgress<N: Operand> {
     
     func writeToMemory(_ operation: (N, N) -> (UInt16, N)) -> Processor {
         let (address, value) = operation(a, b)
-        return state.processor.with(memory: state.processor.memory.write(address, value, as: N.self))
+        return state.writeToMemory(address, value).terminate()
+//        return state.processor.with(memory: state.processor.memory.write(address, value, as: N.self))
     }
     
     func applyProgramCounter(_ operation: (UInt16, N, N) -> UInt16) -> Processor {
-        return state.processor.with(programCounter: operation(state.processor.programCounter, a, b))
+        return state.jump(to: operation(state.programCounter, a, b)).terminate()
     }
 
     func apply21(_ operation: (N, N) -> N) -> OperationUnaryResult<N> {
@@ -794,7 +822,7 @@ struct OperationUnaryResult<N: Operand> {
     let state: InstructionState<N>
     
     func push(_ stack: Stack = .workingStack) -> Processor {
-        return state.push(result, stack).processor
+        return state.push(result, stack).terminate()
     }
 }
 
