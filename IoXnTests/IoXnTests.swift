@@ -13,14 +13,14 @@ struct IoXnArithemticTests {
     @Test func opcodeInc() async throws {
         expect(Processor()
             .push(6)
-            .opcode(.inc)
+            .step(.inc)
         ).to(equal(Processor().with(
             workingStack: [7]
         )))
         
         expect(Processor()
             .push(6)
-            .opcode(.inck)
+            .step(.inck)
         ).to(equal(Processor().with(
             workingStack: [6, 7]
         )))
@@ -28,7 +28,7 @@ struct IoXnArithemticTests {
         expect(Processor()
             .push(6)
             .push(255)
-            .opcode(.inc2)
+            .step(.inc2)
         ).to(equal(Processor().with(
             workingStack: oneWordAsByteArray(1792)
         )))
@@ -36,7 +36,7 @@ struct IoXnArithemticTests {
         expect(Processor()
             .push(6)
             .push(255)
-            .opcode(.inc2k)
+            .step(.inc2k)
         ).to(equal(Processor().with(
             workingStack: [6, 255] + oneWordAsByteArray(1792)
         )))
@@ -46,7 +46,7 @@ struct IoXnArithemticTests {
         expect(Processor()
             .push(1)
             .push(2)
-            .opcode(.add)
+            .step(.add)
         ).to(equal(Processor().with(
             workingStack: [3]
         )))
@@ -54,7 +54,7 @@ struct IoXnArithemticTests {
         expect(Processor()
             .push(255)
             .push(1)
-            .opcode(.add)
+            .step(.add)
         ).to(equal(Processor().with(
             workingStack: [0]
         )))
@@ -64,7 +64,7 @@ struct IoXnArithemticTests {
         expect(Processor()
             .push(2)
             .push(1)
-            .opcode(.sub)
+            .step(.sub)
         ).to(equal(Processor().with(
             workingStack: [1]
         )))
@@ -72,7 +72,7 @@ struct IoXnArithemticTests {
         expect(Processor()
             .push(1)
             .push(2)
-            .opcode(.sub)
+            .step(.sub)
         ).to(equal(Processor().with(
             workingStack: [255]
         )))
@@ -82,7 +82,7 @@ struct IoXnArithemticTests {
         expect(Processor()
             .push(2)
             .push(2)
-            .opcode(.mul)
+            .step(.mul)
         ).to(equal(Processor().with(
             workingStack: [4]
         )))
@@ -90,7 +90,7 @@ struct IoXnArithemticTests {
         expect(Processor()
             .push(130)
             .push(2)
-            .opcode(.mul)
+            .step(.mul)
         ).to(equal(Processor().with(
             workingStack: [4]
         )))
@@ -100,7 +100,7 @@ struct IoXnArithemticTests {
         expect(Processor()
             .push(6)
             .push(2)
-            .opcode(.div)
+            .step(.div)
         ).to(equal(Processor().with(
             workingStack: [3]
         )))
@@ -108,7 +108,7 @@ struct IoXnArithemticTests {
         expect(Processor()
             .push(255)
             .push(2)
-            .opcode(.div)
+            .step(.div)
         ).to(equal(Processor().with(
             workingStack: [127]
         )))
@@ -116,7 +116,7 @@ struct IoXnArithemticTests {
         expect(Processor()
             .push(12)
             .push(0)
-            .opcode(.div)
+            .step(.div)
         ).to(equal(Processor().with(
             workingStack: [0]
         )))
@@ -130,7 +130,7 @@ struct IoXnStackTests {
             .push(1)
             .push(2)
             .push(3)
-            .opcode(.pop)
+            .step(.pop)
         ).to(equal(Processor().with(
             workingStack: [1, 2]
         )))
@@ -139,7 +139,7 @@ struct IoXnStackTests {
             .push(1)
             .push(2)
             .push(3)
-            .opcode(.popk)
+            .step(.popk)
         ).to(equal(Processor().with(
             workingStack: [1, 2, 3]
         )))
@@ -148,7 +148,7 @@ struct IoXnStackTests {
             .push(1)
             .push(2)
             .push(3)
-            .opcode(.pop2)
+            .step(.pop2)
         ).to(equal(Processor().with(
             workingStack: [1]
         )))
@@ -157,7 +157,7 @@ struct IoXnStackTests {
             .push(1, .returnStack)
             .push(2, .returnStack)
             .push(3, .returnStack)
-            .opcode(.pop2kr)
+            .step(.pop2kr)
         ).to(equal(Processor().with(
             returnStack: [1, 2, 3]
         )))
@@ -169,7 +169,7 @@ struct IoXnStackTests {
             .push(1)
             .push(2)
             .push(3)
-            .opcode(.rot)
+            .step(.rot)
         
         expect(result).to(equal(Processor().with(
             workingStack: [2, 3, 1]
@@ -180,7 +180,7 @@ struct IoXnStackTests {
         let result = Processor()
             .push(1)
             .push(2)
-            .opcode(.dup)
+            .step(.dup)
         
         expect(result).to(equal(Processor().with(
             workingStack: [1, 2, 2]
@@ -191,7 +191,7 @@ struct IoXnStackTests {
         let processor = Processor()
             .push(1)
             .push(2)
-            .opcode(.ovr)
+            .step(.ovr)
         
         expect(processor).to(equal(Processor().with(
             workingStack: [1, 2, 1]
@@ -201,14 +201,14 @@ struct IoXnStackTests {
     @Test func opcodeSth() async throws {
         expect(Processor()
             .push(2)
-            .opcode(.sth)
+            .step(.sth)
         ).to(equal(Processor().with(
             returnStack: [2]
         )))
         
         expect(Processor()
             .push(2, .returnStack)
-            .opcode(.sthr)
+            .step(.sthr)
         ).to(equal(Processor().with(
             workingStack: [2]
         )))
@@ -223,7 +223,7 @@ struct IoXnMemoryTests {
         
         expect(Processor().with(memory: initialMemory)
             .push(2)
-            .opcode(.ldz)
+            .step(.ldz)
         ).to(equal(Processor().with(
             workingStack: [250],
             memory: initialMemory
@@ -231,7 +231,7 @@ struct IoXnMemoryTests {
 
         expect(Processor().with(memory: initialMemory)
             .push(0).push(2)
-            .opcode(.ldz2)
+            .step(.ldz2)
         ).to(equal(Processor().with(
             workingStack: [250, 12],
             memory: initialMemory
@@ -243,7 +243,7 @@ struct IoXnMemoryTests {
         expect(Processor()
             .push(2)
             .push(250)
-            .opcode(.stz)
+            .step(.stz)
         ).to(equal(Processor().with(
             memory: Memory().write(UInt8(250), 2)
         )))
@@ -252,7 +252,7 @@ struct IoXnMemoryTests {
             .push(2)
             .push(3)
             .push(250)
-            .opcode(.stz2)
+            .step(.stz2)
         ).to(equal(Processor().with(
             memory: Memory()
                 .write(UInt8(250), 2)
@@ -266,14 +266,14 @@ struct IoXnProgramCounterTests {
     @Test func opcodeJmp() async throws {
         expect(Processor().with(programCounter: 12043)
             .push(2)
-            .opcode(.jmp)
+            .step(.jmp)
        ).to(equal(Processor().with(
             programCounter: 12045
        )))
         
         expect(Processor().with(programCounter: 12043)
             .push(0 &- 2)
-            .opcode(.jmp)
+            .step(.jmp)
        ).to(equal(Processor().with(
             programCounter: 12041
         )))
@@ -282,7 +282,7 @@ struct IoXnProgramCounterTests {
         expect(Processor().with(programCounter: 12043)
             .push(5)
             .push(2)
-            .opcode(.jcn)
+            .step(.jcn)
         ).to(equal(Processor().with(
             programCounter: 12045
         )))
@@ -290,14 +290,14 @@ struct IoXnProgramCounterTests {
         expect(Processor().with(programCounter: 12043)
             .push(0)
             .push(2)
-            .opcode(.jcn).programCounter
+            .step(.jcn).programCounter
         ).to(equal(12043))
     }
     
     @Test func opcodeJsr() async throws {
         expect(Processor().with(programCounter: 12043)
             .push(5)
-            .opcode(.jsr)
+            .step(.jsr)
         ).to(equal(Processor().with(
             programCounter: 12048,
             returnStack: oneWordAsByteArray(12043)
@@ -321,36 +321,65 @@ func twoBytesAsOneWord(_ highByte: UInt8, _ lowByte: UInt8) -> UInt16 {
     return UInt16(highByte) << 8 | UInt16(lowByte)
 }
 
-enum Opcode {
-    case inc
-    case inc2
-    case incr
-    case inc2r
-    case inck
-    case inc2k
-    case inckr
-    case inc2kr
-    case pop
-    case popk
-    case pop2
-    case pop2kr
+enum CompleteOpcode: UInt8 {
+    case inc    = 0x01
+    case inc2   = 0x21
+    case incr   = 0x41
+    case inc2r  = 0x61
+    case inck   = 0x81
+    case inc2k  = 0xa1
+    case inckr  = 0xc1
+    case inc2kr = 0xe1
     
-    case add
-    case sub
-    case mul
-    case div
-    case rot
-    case dup
-    case ovr
-    case sth
-    case sthr
-    case ldz
-    case ldz2
-    case stz
-    case stz2
-    case jmp
-    case jcn
-    case jsr
+    case pop    = 0x02
+    case pop2   = 0x22
+    case popk   = 0x82
+    case pop2kr = 0xe2
+    
+    case add = 0x18
+    case sub = 0x19
+    case mul = 0x1a
+    case div = 0x1b
+    
+    case rot = 0x05
+    case dup = 0x06
+    case ovr = 0x07
+    
+    case sth = 0x0f
+    case sthr = 0x4f
+    
+    case ldz  = 0x10
+    case stz  = 0x11
+    
+    case ldz2 = 0x30
+    case stz2 = 0x31
+    
+    case jmp = 0x0c
+    case jcn = 0x0d
+    case jsr = 0x0e
+}
+
+enum Opcode: UInt8 {
+    case inc = 0x01
+    case pop = 0x02
+    
+    case add = 0x18
+    case sub = 0x19
+    case mul = 0x1a
+    case div = 0x1b
+    
+    case rot = 0x05
+    case dup = 0x06
+    case ovr = 0x07
+    
+    case sth = 0x0f
+    
+    case ldz  = 0x10
+    case stz  = 0x11
+    
+    case jmp = 0x0c
+    case jcn = 0x0d
+    case jsr = 0x0e
 }
 
 enum Stack {
@@ -485,36 +514,36 @@ struct Processor : Equatable {
         return instruction.pop().drop()
     }
 
-    private func add<N: Operand>(_ mark: N.Type) -> Processor {
-        return Instruction<N>(self).pop().pop().apply21(&+).push()
+    private func add<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        return instruction.pop().pop().apply21(&+).push()
     }
     
-    private func sub<N: Operand>(_ mark: N.Type) -> Processor {
-        return Instruction<N>(self).pop().pop().apply21(&-).push()
+    private func sub<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        return instruction.pop().pop().apply21(&-).push()
     }
 
-    private func mul<N: Operand>(_ mark: N.Type) -> Processor {
-        return Instruction<N>(self).pop().pop().apply21(&*).push()
+    private func mul<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        return instruction.pop().pop().apply21(&*).push()
     }
 
-    private func div<N: Operand>(_ mark: N.Type) -> Processor {
-        return Instruction<N>(self).pop().pop().apply21({ a, b in b == 0 ? 0 : a / b}).push()
+    private func div<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        return instruction.pop().pop().apply21({ a, b in b == 0 ? 0 : a / b}).push()
     }
 
-    private func rot<N: Operand>(_ mark: N.Type) -> Processor {
-        return Instruction<N>(self)
+    private func rot<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        return instruction
             .pop().pop().pop()
             .apply33({ a, b, c in (b, c, a) })
             .push().push().push()
     }
     
-    private func dup<N: Operand>(_ mark: N.Type) -> Processor {
-        return Instruction<N>(self)
+    private func dup<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        return instruction
             .pop().apply12( { a in (a, a) } ).push().push()
     }
 
-    private func ovr<N: Operand>(_ mark: N.Type) -> Processor {
-        return Instruction<N>(self)
+    private func ovr<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        return instruction
             .pop().pop().apply23( { a, b in (a, b, a) } ).push().push().push()
     }
     
@@ -523,85 +552,86 @@ struct Processor : Equatable {
             .pop().apply11( { a in a } ).push(.returnStack)
     }
 
-    private func ldz<N: Operand>(_ mark: N.Type) -> Processor {
-        return Instruction<N>(self)
+    private func ldz<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        return instruction
             .pop().apply11( { a in memory.read(UInt16(a), as: N.self) } ).push()
     }
 
-    private func stz<N: Operand>(_ mark: N.Type) -> Processor {
-        return Instruction<N>(self)
+    private func stz<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        return instruction
             .popByte().pop()
             .writeToMemory({ a, b in (UInt16(b), a) })
     }
     
-    func opcode(_ opcode: Opcode) -> Processor {
+    private func jmp<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        return instruction
+            .pop()
+            .applyProgramCounter( { pc, a in jump(pc: pc, offset: UInt8(a)) } )
+    }
+    
+    private func jcn<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        return instruction
+            .pop().pop()
+            .applyProgramCounter( { pc, a, b in a != 0
+                ? jump(pc: pc, offset: UInt8(b))
+                : pc
+            })
+    }
+    
+    private func jsr<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        return instruction
+            .popByte()
+            .applyProgramCounterSave({ pc, a in jump(pc: pc, offset: UInt8(a)) })
+            .push(.returnStack)
+    }
+    
+    func step<N: Operand>(for: N.Type, reverseStack: Bool, keepStack: Bool, opcode: Opcode) -> Processor {
+        let instruction = Instruction<N>(self, reverseStack: reverseStack, keepStack: keepStack)
         switch opcode {
         case .inc:
-            return inc(Instruction<UInt8>(self))
-        case .incr:
-            return inc(Instruction<UInt8>(self, reverseStack: true))
-        case .inc2:
-            return inc(Instruction<UInt16>(self))
-        case .inc2r:
-            return inc(Instruction<UInt16>(self, reverseStack: true))
-        case .inck:
-            return inc(Instruction<UInt8>(self, keepStack: true))
-        case .inckr:
-            return inc(Instruction<UInt8>(self, reverseStack: true, keepStack: true))
-        case .inc2k:
-            return inc(Instruction<UInt16>(self, keepStack: true))
-        case .inc2kr:
-            return inc(Instruction<UInt16>(self, reverseStack: true, keepStack: true))
+            return inc(instruction)
         case .pop:
-            return pop(Instruction<UInt8>(self))
-        case .popk:
-            return pop(Instruction<UInt8>(self, keepStack: true))
-        case .pop2:
-            return pop(Instruction<UInt16>(self))
-        case .pop2kr:
-            return pop(Instruction<UInt16>(self, reverseStack: true, keepStack: true))
+            return pop(instruction)
         case .add:
-            return add(UInt8.self)
+            return add(instruction)
         case .sub:
-            return sub(UInt8.self)
+            return sub(instruction)
         case .mul:
-            return mul(UInt8.self)
+            return mul(instruction)
         case .div:
-            return div(UInt8.self)
+            return div(instruction)
         case .rot:
-            return rot(UInt8.self)
+            return rot(instruction)
         case .dup:
-            return dup(UInt8.self)
+            return dup(instruction)
         case .ovr:
-            return ovr(UInt8.self)
+            return ovr(instruction)
         case .sth:
-            return sth(Instruction<UInt8>(self))
-        case .sthr:
-            return sth(Instruction<UInt8>(self, reverseStack: true))
+            return sth(instruction)
         case .ldz:
-            return ldz(UInt8.self)
-        case .ldz2:
-            return ldz(UInt16.self)
+            return ldz(instruction)
         case .stz:
-            return stz(UInt8.self)
-        case .stz2:
-            return stz(UInt16.self)
+            return stz(instruction)
         case .jmp:
-            return Instruction<UInt8>(self)
-                .pop()
-                .applyProgramCounter( { pc, a in jump(pc: pc, offset: a) } )
+            return jmp(instruction)
         case .jcn:
-            return Instruction<UInt8>(self)
-                .pop().pop()
-                .applyProgramCounter( { pc, a, b in a != 0
-                    ? jump(pc: pc, offset: b)
-                    : pc
-                })
+            return jcn(instruction)
         case .jsr:
-            return Instruction<UInt16>(self)
-                .popByte()
-                .applyProgramCounter11( { pc, a in (jump(pc: pc, offset: UInt8(a)), pc) })
-                .push(.returnStack)
+            return jsr(instruction)
+        }
+    }
+    
+    func step(_ opcodeWithModifiers: CompleteOpcode) -> Processor {
+        
+        let keep = opcodeWithModifiers.rawValue & 0x80 == 0x00 ? false : true
+        let reverse = opcodeWithModifiers.rawValue & 0x40 == 0x00 ? false : true
+        let word = opcodeWithModifiers.rawValue & 0x20 == 0x00 ? false : true
+        let opcode: Opcode = Opcode(rawValue: opcodeWithModifiers.rawValue & 0x1F)!
+        
+        if word {
+            return step(for: UInt16.self, reverseStack: reverse, keepStack: keep, opcode: opcode)
+        } else {
+            return step(for: UInt8.self, reverseStack: reverse, keepStack: keep, opcode: opcode)
         }
     }
     private func jump(pc: UInt16, offset: UInt8) -> UInt16 {
@@ -663,6 +693,14 @@ struct InstructionState<N: Operand> {
     }
     
     func push(_ value: N, _ stack: Stack = .workingStack) -> InstructionState<N> {
+        let nextProcessor = keepStack ? processor.push(popped.reversed(), realStack(stack)) : processor
+        return with(
+            processor: nextProcessor.push(value.toByteArray(), realStack(stack)),
+            popped: []
+        )
+    }
+
+    func pushWord(_ value: UInt16, _ stack: Stack = .workingStack) -> InstructionState<N> {
         let nextProcessor = keepStack ? processor.push(popped.reversed(), realStack(stack)) : processor
         return with(
             processor: nextProcessor.push(value.toByteArray(), realStack(stack)),
@@ -732,10 +770,10 @@ struct UnaryOperationInProgress<N: Operand> {
         state.jump(to: operation(state.programCounter, a)).terminate()
     }
 
-    func applyProgramCounter11(_ operation: (UInt16, N) -> (UInt16, N)) -> OperationUnaryResult<N> {
-        let (pc, result) = operation(state.programCounter, a)
-        return OperationUnaryResult<N>(
-            result: N(result),
+    func applyProgramCounterSave(_ operation: (UInt16, N) -> UInt16) -> OperationProgramCounterResult<N> {
+        let pc = operation(state.programCounter, a)
+        return OperationProgramCounterResult<N>(
+            savedProgramCounter: state.programCounter,
             state: state.jump(to: pc)
         )
     }
@@ -823,6 +861,15 @@ struct OperationUnaryResult<N: Operand> {
     
     func push(_ stack: Stack = .workingStack) -> Processor {
         return state.push(result, stack).terminate()
+    }
+}
+
+struct OperationProgramCounterResult<N: Operand> {
+    let savedProgramCounter: UInt16
+    let state: InstructionState<N>
+    
+    func push(_ stack: Stack = .workingStack) -> Processor {
+        return state.pushWord(savedProgramCounter, stack).terminate()
     }
 }
 
