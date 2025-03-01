@@ -557,6 +557,19 @@ struct IoXnProgramCounterTests {
             memory: memory
         )))
     }
+    
+    @Test func opcodeJmi() async throws {
+        let memory = Memory()
+            .write(UInt16(12043), 0)
+            .write(UInt16(12044), 125)
+        
+        expect(Processor().with(programCounter: 12043, memory: memory)
+            .step(.jmi)
+        ).to(equal(Processor().with(
+            programCounter: 12168,
+            memory: memory
+        )))
+    }
 }
 
 func oneWordAsByteArray(_ value: UInt16) -> [UInt8] {
@@ -622,6 +635,7 @@ enum CompleteOpcode: UInt8 {
     case sta  = 0x15
     
     case jci  = 0x20
+    case jmi  = 0x40
     
     case ldz2 = 0x30
     case stz2 = 0x31
@@ -676,6 +690,7 @@ enum Opcode: UInt8 {
     case sft = 0x1f
     
     case jci = 0x20
+    case jmi = 0x40
 }
 
 enum Stack {
@@ -964,6 +979,17 @@ struct Processor : Equatable {
             })
     }
     
+    private func jmi<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        //TODO do not access programCounter directly from here
+        return instruction
+            .readByteFromMemory(programCounter + 1)
+            .applyProgramCounter({
+                pc, a in
+                if a == 0 { pc &+ 2 }
+                else { jump(pc: pc, offset: a) }
+            })
+    }
+    
     func step<N: Operand>(for: N.Type, reverseStack: Bool, keepStack: Bool, opcode: Opcode) -> Processor {
         let instruction = Instruction<N>(self, reverseStack: reverseStack, keepStack: keepStack)
         switch opcode {
@@ -1000,6 +1026,8 @@ struct Processor : Equatable {
             return jsr(instruction)
         case .jci:
             return jci(instruction)
+        case .jmi:
+            return jmi(instruction)
         
         case .sth:
             return sth(instruction)
@@ -1039,14 +1067,15 @@ struct Processor : Equatable {
     
     func step(_ opcodeWithModifiers: CompleteOpcode) -> Processor {
         
-        if (opcodeWithModifiers == .jci) {
+        switch opcodeWithModifiers {
+        case .jci, .jmi:
             return step(
                 for: UInt8.self,
                 reverseStack: false,
                 keepStack: false,
                 opcode: Opcode(rawValue: opcodeWithModifiers.rawValue)!
             )
-        } else {
+        default:
             let keep = opcodeWithModifiers.rawValue & 0x80 == 0x00 ? false : true
             let reverse = opcodeWithModifiers.rawValue & 0x40 == 0x00 ? false : true
             let word = opcodeWithModifiers.rawValue & 0x20 == 0x00 ? false : true
@@ -1059,6 +1088,7 @@ struct Processor : Equatable {
             }
         }
     }
+    
     private func jump(pc: UInt16, offset: UInt8) -> UInt16 {
         let offsetAsUInt16: UInt16 = offset < 128
         ? UInt16(offset)
@@ -1216,6 +1246,10 @@ struct UnaryByteOperationInProgress<N: Operand> {
             b: a,
             state: nextState
         )
+    }
+    
+    func applyProgramCounter(_ operation: (UInt16, UInt8) -> UInt16) -> Processor {
+        state.jump(to: operation(state.programCounter, a)).terminate()
     }
 }
 
