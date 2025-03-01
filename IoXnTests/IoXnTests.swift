@@ -237,6 +237,25 @@ struct IoXnStackTests {
     }
 }
 
+struct IoXnLogicTests {
+    @Test func opcodeEqu() async throws {
+        expect(Processor()
+            .push(1)
+            .push(2)
+            .step(.equ)
+        ).to(equal(Processor().with(
+            workingStack: [0]
+        )))
+        expect(Processor()
+            .push(1)
+            .push(1)
+            .step(.equ)
+        ).to(equal(Processor().with(
+            workingStack: [1]
+        )))
+    }
+}
+
 struct IoXnMemoryTests {
     @Test func opcodeLdz() async throws {
         let initialMemory = Memory()
@@ -358,17 +377,18 @@ enum CompleteOpcode: UInt8 {
     case popk   = 0x82
     case pop2kr = 0xe2
     
-    case nip    = 0x03
-    case swp    = 0x04
+    case nip = 0x03
+    case swp = 0x04
+    case rot = 0x05
+    case dup = 0x06
+    case ovr = 0x07
+    case equ = 0x08
     
     case add = 0x18
     case sub = 0x19
     case mul = 0x1a
     case div = 0x1b
     
-    case rot = 0x05
-    case dup = 0x06
-    case ovr = 0x07
     
     case sth = 0x0f
     case sthr = 0x4f
@@ -389,15 +409,17 @@ enum Opcode: UInt8 {
     case pop = 0x02
     case nip = 0x03
     case swp = 0x04
+    case rot = 0x05
+    case dup = 0x06
+    case ovr = 0x07
+    case equ = 0x08
     
     case add = 0x18
     case sub = 0x19
     case mul = 0x1a
     case div = 0x1b
     
-    case rot = 0x05
-    case dup = 0x06
-    case ovr = 0x07
+    
     
     case sth = 0x0f
     
@@ -581,6 +603,11 @@ struct Processor : Equatable {
         return instruction
             .pop().pop().apply23( { a, b in (a, b, a) } ).push().push().push()
     }
+
+    private func equ<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        return instruction
+            .pop().pop().apply21( { a, b in a == b ? 1 : 0 } ).push()
+    }
     
     private func sth<N: Operand>(_ instruction: Instruction<N>) -> Processor {
         return instruction
@@ -631,6 +658,15 @@ struct Processor : Equatable {
             return nip(instruction)
         case .swp:
             return swp(instruction)
+        case .rot:
+            return rot(instruction)
+        case .dup:
+            return dup(instruction)
+        case .ovr:
+            return ovr(instruction)
+        case .equ:
+            return equ(instruction)
+        
         case .add:
             return add(instruction)
         case .sub:
@@ -639,12 +675,6 @@ struct Processor : Equatable {
             return mul(instruction)
         case .div:
             return div(instruction)
-        case .rot:
-            return rot(instruction)
-        case .dup:
-            return dup(instruction)
-        case .ovr:
-            return ovr(instruction)
         case .sth:
             return sth(instruction)
         case .ldz:
