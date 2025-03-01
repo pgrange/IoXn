@@ -387,8 +387,32 @@ struct IoXnMemoryTests {
             workingStack: [250, 12],
             memory: initialMemory
         )))
+    }
+    
+    @Test func opcodeStr() async throws {
+        expect(Processor().with(programCounter: 340)
+            .push(2)
+            .push(10)
+            .step(.str)
+        ).to(equal(Processor().with(
+            programCounter: 340,
+            memory: Memory().write(UInt16(350), 2)
+        )))
+        
+        expect(Processor().with(programCounter: 340)
+            .push(2)
+            .push(3)
+            .push(10)
+            .step(.str2)
+        ).to(equal(Processor().with(
+            programCounter: 340,
+            memory: Memory()
+                .write(UInt16(350), 2)
+                .write(UInt16(351), 3)
+        )))
 
     }
+    
 }
 
 struct IoXnProgramCounterTests {
@@ -475,8 +499,6 @@ enum CompleteOpcode: UInt8 {
     case gth = 0x0a
     case lth = 0x0b
     
-    case ldr  = 0x12
-    case ldr2 = 0x32
     
     case add = 0x18
     case sub = 0x19
@@ -489,9 +511,13 @@ enum CompleteOpcode: UInt8 {
     
     case ldz  = 0x10
     case stz  = 0x11
+    case ldr  = 0x12
+    case str  = 0x13
     
     case ldz2 = 0x30
     case stz2 = 0x31
+    case ldr2 = 0x32
+    case str2  = 0x33
     
     case jmp = 0x0c
     case jcn = 0x0d
@@ -522,8 +548,7 @@ enum Opcode: UInt8 {
     case ldz  = 0x10
     case stz  = 0x11
     case ldr  = 0x12
-    
-    //TODO LDR https://wiki.xxiivv.com/site/uxntal_reference.html#ldr
+    case str  = 0x13
     
     case add = 0x18
     case sub = 0x19
@@ -742,9 +767,16 @@ struct Processor : Equatable {
     
     private func ldr<N: Operand>(_ instruction: Instruction<N>) -> Processor {
         return instruction
-            .popByte().apply11( { a in memory.read(self.programCounter &+ UInt16(a), as: N.self) } ).push()
+            .popByte().apply11( { a in memory.read(programCounter &+ UInt16(a), as: N.self) } ).push()
+        //TODO define a readFromMemory method
     }
 
+    private func str<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        return instruction
+            .popByte().pop()
+            .writeToMemory({ a, b in (programCounter + UInt16(b), a) })
+    }
+    
     private func jmp<N: Operand>(_ instruction: Instruction<N>) -> Processor {
         return instruction
             .pop()
@@ -811,6 +843,8 @@ struct Processor : Equatable {
             return stz(instruction)
         case .ldr:
             return ldr(instruction)
+        case .str:
+            return str(instruction)
         
         case .add:
             return add(instruction)
