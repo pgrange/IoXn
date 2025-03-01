@@ -254,6 +254,22 @@ struct IoXnLogicTests {
             workingStack: [1]
         )))
     }
+    @Test func opcodeNeq() async throws {
+        expect(Processor()
+            .push(1)
+            .push(2)
+            .step(.neq)
+        ).to(equal(Processor().with(
+            workingStack: [1]
+        )))
+        expect(Processor()
+            .push(1)
+            .push(1)
+            .step(.neq)
+        ).to(equal(Processor().with(
+            workingStack: [0]
+        )))
+    }
 }
 
 struct IoXnMemoryTests {
@@ -383,6 +399,7 @@ enum CompleteOpcode: UInt8 {
     case dup = 0x06
     case ovr = 0x07
     case equ = 0x08
+    case neq = 0x09
     
     case add = 0x18
     case sub = 0x19
@@ -413,6 +430,7 @@ enum Opcode: UInt8 {
     case dup = 0x06
     case ovr = 0x07
     case equ = 0x08
+    case neq = 0x09
     
     case add = 0x18
     case sub = 0x19
@@ -609,6 +627,11 @@ struct Processor : Equatable {
             .pop().pop().apply21( { a, b in a == b ? 1 : 0 } ).push()
     }
     
+    private func neq<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        return instruction
+            .pop().pop().apply21( { a, b in a == b ? 0 : 1 } ).push()
+    }
+    
     private func sth<N: Operand>(_ instruction: Instruction<N>) -> Processor {
         return instruction
             .pop().apply11( { a in a } ).push(.returnStack)
@@ -666,6 +689,8 @@ struct Processor : Equatable {
             return ovr(instruction)
         case .equ:
             return equ(instruction)
+        case .neq:
+            return neq(instruction)
         
         case .add:
             return add(instruction)
