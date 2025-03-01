@@ -293,6 +293,30 @@ struct IoXnLogicTests {
             workingStack: [0]
         )))
     }
+    
+    @Test func opcodeLth() async throws {
+        expect(Processor()
+            .push(1)
+            .push(2)
+            .step(.lth)
+        ).to(equal(Processor().with(
+            workingStack: [1]
+        )))
+        expect(Processor()
+            .push(2)
+            .push(1)
+            .step(.lth)
+        ).to(equal(Processor().with(
+            workingStack: [0]
+        )))
+        expect(Processor()
+            .push(1)
+            .push(1)
+            .step(.lth)
+        ).to(equal(Processor().with(
+            workingStack: [0]
+        )))
+    }
 }
 
 struct IoXnMemoryTests {
@@ -424,6 +448,7 @@ enum CompleteOpcode: UInt8 {
     case equ = 0x08
     case neq = 0x09
     case gth = 0x0a
+    case lth = 0x0b
     
     case add = 0x18
     case sub = 0x19
@@ -456,6 +481,7 @@ enum Opcode: UInt8 {
     case equ = 0x08
     case neq = 0x09
     case gth = 0x0a
+    case lth = 0x0b
     
     case add = 0x18
     case sub = 0x19
@@ -662,6 +688,11 @@ struct Processor : Equatable {
             .pop().pop().apply21( { a, b in a > b ? 1 : 0 } ).push()
     }
     
+    private func lth<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        return instruction
+            .pop().pop().apply21( { a, b in a < b ? 1 : 0 } ).push()
+    }
+    
     private func sth<N: Operand>(_ instruction: Instruction<N>) -> Processor {
         return instruction
             .pop().apply11( { a in a } ).push(.returnStack)
@@ -723,6 +754,8 @@ struct Processor : Equatable {
             return neq(instruction)
         case .gth:
             return gth(instruction)
+        case .lth:
+            return lth(instruction)
         
         case .add:
             return add(instruction)
