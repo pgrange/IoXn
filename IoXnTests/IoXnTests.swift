@@ -164,6 +164,17 @@ struct IoXnStackTests {
 
     }
     
+    @Test func opcodeNip() async throws {
+        expect(Processor()
+            .push(1)
+            .push(2)
+            .push(3)
+            .step(.nip)
+        ).to(equal(Processor().with(
+            workingStack: [1, 3]
+        )))
+    }
+    
     @Test func opcodeRot() async throws {
         let result = Processor()
             .push(1)
@@ -336,6 +347,8 @@ enum CompleteOpcode: UInt8 {
     case popk   = 0x82
     case pop2kr = 0xe2
     
+    case nip    = 0x03
+    
     case add = 0x18
     case sub = 0x19
     case mul = 0x1a
@@ -362,6 +375,7 @@ enum CompleteOpcode: UInt8 {
 enum Opcode: UInt8 {
     case inc = 0x01
     case pop = 0x02
+    case nip = 0x03
     
     case add = 0x18
     case sub = 0x19
@@ -511,7 +525,11 @@ struct Processor : Equatable {
     }
     
     private func pop<N: Operand>(_ instruction: Instruction<N>) -> Processor {
-        return instruction.pop().drop()
+        return instruction.pop().noop().drop()
+    }
+    
+    private func nip<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        return instruction.pop().pop().noop().drop().push()
     }
 
     private func add<N: Operand>(_ instruction: Instruction<N>) -> Processor {
@@ -592,6 +610,8 @@ struct Processor : Equatable {
             return inc(instruction)
         case .pop:
             return pop(instruction)
+        case .nip:
+            return nip(instruction)
         case .add:
             return add(instruction)
         case .sub:
@@ -762,8 +782,11 @@ struct UnaryOperationInProgress<N: Operand> {
         )
     }
     
-    func drop() -> Processor {
-        return state.terminate()
+    func noop() -> OperationUnaryResult<N> {
+        return OperationUnaryResult<N>(
+            result: a,
+            state: state
+        )
     }
     
     func applyProgramCounter(_ operation: (UInt16, N) -> UInt16) -> Processor {
@@ -813,11 +836,14 @@ struct BinaryOperationInProgress<N: Operand> {
     func writeToMemory(_ operation: (N, N) -> (UInt16, N)) -> Processor {
         let (address, value) = operation(a, b)
         return state.writeToMemory(address, value).terminate()
-//        return state.processor.with(memory: state.processor.memory.write(address, value, as: N.self))
     }
     
     func applyProgramCounter(_ operation: (UInt16, N, N) -> UInt16) -> Processor {
         return state.jump(to: operation(state.programCounter, a, b)).terminate()
+    }
+    
+    func noop() -> OperationBinaryResult<N> {
+        return OperationBinaryResult(resultA: a, resultB: b, state: state)
     }
 
     func apply21(_ operation: (N, N) -> N) -> OperationUnaryResult<N> {
@@ -862,6 +888,10 @@ struct OperationUnaryResult<N: Operand> {
     func push(_ stack: Stack = .workingStack) -> Processor {
         return state.push(result, stack).terminate()
     }
+    
+    func drop() -> Processor {
+        return state.terminate()
+    }
 }
 
 struct OperationProgramCounterResult<N: Operand> {
@@ -882,6 +912,13 @@ struct OperationBinaryResult<N: Operand> {
         return OperationUnaryResult(
             result: resultB,
             state: state.push(resultA)
+        )
+    }
+    
+    func drop() -> OperationUnaryResult<N> {
+        return OperationUnaryResult(
+            result: resultB,
+            state: state
         )
     }
 }
