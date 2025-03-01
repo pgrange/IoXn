@@ -338,6 +338,17 @@ struct IoXnLogicTests {
         )))
     }
 
+    @Test func opcodeEor() async throws {
+        expect(Processor()
+            .push(0x0F)
+            .push(0xD2)
+            .step(.eor)
+        ).to(equal(Processor().with(
+            workingStack: [0xDD]
+        )))
+    }
+
+    
 }
 
 struct IoXnMemoryTests {
@@ -565,6 +576,7 @@ enum CompleteOpcode: UInt8 {
     
     case and = 0x1c
     case ora = 0x1d
+    case eor = 0x1e
     
     case sth = 0x0f
     case sthr = 0x4f
@@ -625,6 +637,7 @@ enum Opcode: UInt8 {
     
     case and = 0x1c
     case ora = 0x1d
+    case eor = 0x1e
 }
 
 enum Stack {
@@ -791,6 +804,10 @@ struct Processor : Equatable {
         return instruction.pop().pop().apply21(|).push()
     }
 
+    private func eor<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        return instruction.pop().pop().apply21(^).push()
+    }
+
     private func rot<N: Operand>(_ instruction: Instruction<N>) -> Processor {
         return instruction
             .pop().pop().pop()
@@ -952,7 +969,8 @@ struct Processor : Equatable {
             return and(instruction)
         case .ora:
             return ora(instruction)
-        
+        case .eor:
+            return eor(instruction)
         }
     }
     
