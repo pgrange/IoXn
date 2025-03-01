@@ -317,6 +317,15 @@ struct IoXnLogicTests {
             workingStack: [0]
         )))
     }
+    @Test func opcodeAnd() async throws {
+        expect(Processor()
+            .push(0x0F)
+            .push(0xF2)
+            .step(.and)
+        ).to(equal(Processor().with(
+            workingStack: [0x02]
+        )))
+    }
 }
 
 struct IoXnMemoryTests {
@@ -542,6 +551,7 @@ enum CompleteOpcode: UInt8 {
     case mul = 0x1a
     case div = 0x1b
     
+    case and = 0x1c
     
     case sth = 0x0f
     case sthr = 0x4f
@@ -591,10 +601,16 @@ enum Opcode: UInt8 {
     case lda  = 0x14
     case sta  = 0x15
     
+    // TODO
+    // https://wiki.xxiivv.com/site/uxntal_reference.html#dei
+    // https://wiki.xxiivv.com/site/uxntal_reference.html#deo
+    
     case add = 0x18
     case sub = 0x19
     case mul = 0x1a
     case div = 0x1b
+    
+    case and = 0x1c
 }
 
 enum Stack {
@@ -751,6 +767,10 @@ struct Processor : Equatable {
 
     private func div<N: Operand>(_ instruction: Instruction<N>) -> Processor {
         return instruction.pop().pop().apply21({ a, b in b == 0 ? 0 : a / b}).push()
+    }
+    
+    private func and<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        return instruction.pop().pop().apply21(&).push()
     }
 
     private func rot<N: Operand>(_ instruction: Instruction<N>) -> Processor {
@@ -909,6 +929,9 @@ struct Processor : Equatable {
             return mul(instruction)
         case .div:
             return div(instruction)
+            
+        case .and:
+            return and(instruction)
         
         }
     }
