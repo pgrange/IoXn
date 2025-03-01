@@ -426,6 +426,30 @@ struct IoXnMemoryTests {
             memory: initialMemory
         )))
     }
+    
+    @Test func opcodeSta() async throws {
+        expect(Processor()
+            .push(2)
+            .push(0x01)
+            .push(0x5e)
+            .step(.sta)
+        ).to(equal(Processor().with(
+            memory: Memory().write(UInt16(350), 2)
+        )))
+        
+        expect(Processor().with(programCounter: 340)
+            .push(2)
+            .push(3)
+            .push(10)
+            .step(.str2)
+        ).to(equal(Processor().with(
+            programCounter: 340,
+            memory: Memory()
+                .write(UInt16(350), 2)
+                .write(UInt16(351), 3)
+        )))
+
+    }
 }
 
 struct IoXnProgramCounterTests {
@@ -527,6 +551,7 @@ enum CompleteOpcode: UInt8 {
     case ldr  = 0x12
     case str  = 0x13
     case lda  = 0x14
+    case sta  = 0x15
     
     case ldz2 = 0x30
     case stz2 = 0x31
@@ -564,6 +589,7 @@ enum Opcode: UInt8 {
     case ldr  = 0x12
     case str  = 0x13
     case lda  = 0x14
+    case sta  = 0x15
     
     case add = 0x18
     case sub = 0x19
@@ -795,7 +821,13 @@ struct Processor : Equatable {
         return instruction
             .popWord().readFromMemory({ a in a }).push()
     }
-
+    
+    private func sta<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        return instruction
+            .popWord().pop()
+            .writeToMemory({ a, b in (b, a) })
+    }
+    
     private func jmp<N: Operand>(_ instruction: Instruction<N>) -> Processor {
         return instruction
             .pop()
@@ -866,6 +898,8 @@ struct Processor : Equatable {
             return str(instruction)
         case .lda:
             return lda(instruction)
+        case .sta:
+            return sta(instruction)
         
         case .add:
             return add(instruction)
@@ -1036,6 +1070,16 @@ struct UnaryWordOperationInProgress<N: Operand> {
             state: state
         )
     }
+    
+    func pop(_ stack: Stack = .workingStack) -> BinaryWordOperationInProgress<N> {
+        let (b, nextState) = state.pop(stack)
+        return BinaryWordOperationInProgress(
+            a: b,
+            b: a,
+            state: nextState
+        )
+    }
+    
 }
 
 struct UnaryOperationInProgress<N: Operand> {
@@ -1092,6 +1136,17 @@ struct UnaryOperationInProgress<N: Operand> {
             result: value,
             state: state
         )
+    }
+}
+
+struct BinaryWordOperationInProgress<N: Operand> {
+    let a: N
+    let b: UInt16
+    let state: InstructionState<N>
+    
+    func writeToMemory(_ operation: (N, UInt16) -> (UInt16, N)) -> Processor {
+        let (address, value) = operation(a, b)
+        return state.writeToMemory(address, value).terminate()
     }
 }
 
