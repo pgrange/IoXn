@@ -413,6 +413,19 @@ struct IoXnMemoryTests {
 
     }
     
+    @Test func opcodeLda() async throws {
+        let initialMemory = Memory()
+            .write(UInt16(350), 250)
+        
+        expect(Processor().with(memory: initialMemory)
+            .push(0x01)
+            .push(0x5e)
+            .step(.lda)
+        ).to(equal(Processor().with(
+            workingStack: [250],
+            memory: initialMemory
+        )))
+    }
 }
 
 struct IoXnProgramCounterTests {
@@ -513,6 +526,7 @@ enum CompleteOpcode: UInt8 {
     case stz  = 0x11
     case ldr  = 0x12
     case str  = 0x13
+    case lda  = 0x14
     
     case ldz2 = 0x30
     case stz2 = 0x31
@@ -549,6 +563,7 @@ enum Opcode: UInt8 {
     case stz  = 0x11
     case ldr  = 0x12
     case str  = 0x13
+    case lda  = 0x14
     
     case add = 0x18
     case sub = 0x19
@@ -777,6 +792,12 @@ struct Processor : Equatable {
             .writeToMemory({ a, b in (programCounter + UInt16(b), a) })
     }
     
+    private func lda<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        return instruction
+            .popWord().apply11( { a in memory.read(a, as: N.self) } ).push()
+        //TODO define a readFromMemory method
+    }
+
     private func jmp<N: Operand>(_ instruction: Instruction<N>) -> Processor {
         return instruction
             .pop()
@@ -845,6 +866,8 @@ struct Processor : Equatable {
             return ldr(instruction)
         case .str:
             return str(instruction)
+        case .lda:
+            return lda(instruction)
         
         case .add:
             return add(instruction)
@@ -929,6 +952,12 @@ struct InstructionState<N: Operand> {
         return (value, with(processor: nextProcessor, popped: popped + head))
     }
     
+    func popWord(_ stack: Stack = .workingStack) -> (UInt16, InstructionState) {
+        let (head, nextProcessor) = processor.pop(2, realStack(stack))
+        let value: UInt16 = .fromByteArray(head)
+        return (value, with(processor: nextProcessor, popped: popped + head))
+    }
+    
     func push(_ value: N, _ stack: Stack = .workingStack) -> InstructionState<N> {
         let nextProcessor = keepStack ? processor.push(popped.reversed(), realStack(stack)) : processor
         return with(
@@ -982,6 +1011,26 @@ struct Instruction<N: Operand> {
         return UnaryOperationInProgress(
             a: N(a),
             state: nextState
+        )
+    }
+    
+    func popWord() -> UnaryWordOperationInProgress<N> {
+        let (a, nextState) = state.popWord()
+        return UnaryWordOperationInProgress(
+            a: a,
+            state: nextState
+        )
+    }
+}
+
+struct UnaryWordOperationInProgress<N: Operand> {
+    let a: UInt16
+    let state: InstructionState<N>
+    
+    func apply11(_ operation: (UInt16) -> N) -> OperationUnaryResult<N> {
+        return OperationUnaryResult<N>(
+            result: operation(a),
+            state: state
         )
     }
 }
