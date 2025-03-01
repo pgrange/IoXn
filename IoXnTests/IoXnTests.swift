@@ -175,6 +175,17 @@ struct IoXnStackTests {
         )))
     }
     
+    @Test func opcodeSwp() async throws {
+        expect(Processor()
+            .push(1)
+            .push(2)
+            .push(3)
+            .step(.swp)
+        ).to(equal(Processor().with(
+            workingStack: [1, 3, 2]
+        )))
+    }
+    
     @Test func opcodeRot() async throws {
         let result = Processor()
             .push(1)
@@ -348,6 +359,7 @@ enum CompleteOpcode: UInt8 {
     case pop2kr = 0xe2
     
     case nip    = 0x03
+    case swp    = 0x04
     
     case add = 0x18
     case sub = 0x19
@@ -376,6 +388,7 @@ enum Opcode: UInt8 {
     case inc = 0x01
     case pop = 0x02
     case nip = 0x03
+    case swp = 0x04
     
     case add = 0x18
     case sub = 0x19
@@ -532,6 +545,10 @@ struct Processor : Equatable {
         return instruction.pop().pop().noop().drop().push()
     }
 
+    private func swp<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        return instruction.pop().pop().apply22({ a, b in (b, a)}).push().push()
+    }
+
     private func add<N: Operand>(_ instruction: Instruction<N>) -> Processor {
         return instruction.pop().pop().apply21(&+).push()
     }
@@ -612,6 +629,8 @@ struct Processor : Equatable {
             return pop(instruction)
         case .nip:
             return nip(instruction)
+        case .swp:
+            return swp(instruction)
         case .add:
             return add(instruction)
         case .sub:
@@ -849,6 +868,15 @@ struct BinaryOperationInProgress<N: Operand> {
     func apply21(_ operation: (N, N) -> N) -> OperationUnaryResult<N> {
         return OperationUnaryResult(
             result: operation(a, b),
+            state: state
+        )
+    }
+    
+    func apply22(_ operation: (N, N) -> (N, N)) -> OperationBinaryResult<N> {
+        let (resultA, resultB) = operation(a, b)
+        return OperationBinaryResult(
+            resultA: resultA,
+            resultB: resultB,
             state: state
         )
     }
