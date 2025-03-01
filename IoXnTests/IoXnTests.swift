@@ -499,14 +499,14 @@ struct IoXnProgramCounterTests {
         expect(Processor().with(programCounter: 12043)
             .push(2)
             .step(.jmp)
-       ).to(equal(Processor().with(
+        ).to(equal(Processor().with(
             programCounter: 12045
-       )))
+        )))
         
         expect(Processor().with(programCounter: 12043)
             .push(0 &- 2)
             .step(.jmp)
-       ).to(equal(Processor().with(
+        ).to(equal(Processor().with(
             programCounter: 12041
         )))
     }
@@ -533,6 +533,28 @@ struct IoXnProgramCounterTests {
         ).to(equal(Processor().with(
             programCounter: 12048,
             returnStack: oneWordAsByteArray(12043)
+        )))
+    }
+    
+    @Test func opcodeJci() async throws {
+        let memory = Memory()
+            .write(UInt16(12043), 0)
+            .write(UInt16(12044), 125)
+        
+        expect(Processor().with(programCounter: 12043, memory: memory)
+            .push(0)
+            .step(.jci)
+        ).to(equal(Processor().with(
+            programCounter: 12045,
+            memory: memory
+        )))
+        
+        expect(Processor().with(programCounter: 12043, memory: memory)
+            .push(1)
+            .step(.jci)
+        ).to(equal(Processor().with(
+            programCounter: 12168,
+            memory: memory
         )))
     }
 }
@@ -599,6 +621,8 @@ enum CompleteOpcode: UInt8 {
     case lda  = 0x14
     case sta  = 0x15
     
+    case jci  = 0x20
+    
     case ldz2 = 0x30
     case stz2 = 0x31
     case ldr2 = 0x32
@@ -650,6 +674,8 @@ enum Opcode: UInt8 {
     case ora = 0x1d
     case eor = 0x1e
     case sft = 0x1f
+    
+    case jci = 0x20
 }
 
 enum Stack {
@@ -926,6 +952,18 @@ struct Processor : Equatable {
             .push(.returnStack)
     }
     
+    private func jci<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        //TODO do not access programCounter directly from here
+        return instruction
+            .readByteFromMemory(programCounter + 1)
+            .pop()
+            .applyProgramCounter({
+                pc, a, b in
+                if a == 0 { pc &+ 2 }
+                else { jump(pc: pc, offset: b) }
+            })
+    }
+    
     func step<N: Operand>(for: N.Type, reverseStack: Bool, keepStack: Bool, opcode: Opcode) -> Processor {
         let instruction = Instruction<N>(self, reverseStack: reverseStack, keepStack: keepStack)
         switch opcode {
@@ -960,6 +998,8 @@ struct Processor : Equatable {
             return jcn(instruction)
         case .jsr:
             return jsr(instruction)
+        case .jci:
+            return jci(instruction)
         
         case .sth:
             return sth(instruction)
@@ -999,15 +1039,24 @@ struct Processor : Equatable {
     
     func step(_ opcodeWithModifiers: CompleteOpcode) -> Processor {
         
-        let keep = opcodeWithModifiers.rawValue & 0x80 == 0x00 ? false : true
-        let reverse = opcodeWithModifiers.rawValue & 0x40 == 0x00 ? false : true
-        let word = opcodeWithModifiers.rawValue & 0x20 == 0x00 ? false : true
-        let opcode: Opcode = Opcode(rawValue: opcodeWithModifiers.rawValue & 0x1F)!
-        
-        if word {
-            return step(for: UInt16.self, reverseStack: reverse, keepStack: keep, opcode: opcode)
+        if (opcodeWithModifiers == .jci) {
+            return step(
+                for: UInt8.self,
+                reverseStack: false,
+                keepStack: false,
+                opcode: Opcode(rawValue: opcodeWithModifiers.rawValue)!
+            )
         } else {
-            return step(for: UInt8.self, reverseStack: reverse, keepStack: keep, opcode: opcode)
+            let keep = opcodeWithModifiers.rawValue & 0x80 == 0x00 ? false : true
+            let reverse = opcodeWithModifiers.rawValue & 0x40 == 0x00 ? false : true
+            let word = opcodeWithModifiers.rawValue & 0x20 == 0x00 ? false : true
+            let opcode: Opcode = Opcode(rawValue: opcodeWithModifiers.rawValue & 0x1F)!
+            
+            if word {
+                return step(for: UInt16.self, reverseStack: reverse, keepStack: keep, opcode: opcode)
+            } else {
+                return step(for: UInt8.self, reverseStack: reverse, keepStack: keep, opcode: opcode)
+            }
         }
     }
     private func jump(pc: UInt16, offset: UInt8) -> UInt16 {
@@ -1098,6 +1147,10 @@ struct InstructionState<N: Operand> {
         return processor.memory.read(address, as: N.self)
     }
     
+    func readByteFromMemory(_ address: UInt16) -> UInt8 {
+        return processor.memory.read(address, as: UInt8.self)
+    }
+    
     func jump(to pc: UInt16) -> InstructionState<N> {
         return with(processor: processor.with(programCounter: pc))
     }
@@ -1141,6 +1194,29 @@ struct Instruction<N: Operand> {
             state: nextState
         )
     }
+    
+    func readByteFromMemory(_ address: UInt16) -> UnaryByteOperationInProgress<N> {
+        let value = state.readByteFromMemory(address)
+        return UnaryByteOperationInProgress(
+            a: value,
+            state: state
+        )
+    }
+    
+}
+
+struct UnaryByteOperationInProgress<N: Operand> {
+    let a: UInt8
+    let state: InstructionState<N>
+    
+    func pop(_ stack: Stack = .workingStack) -> BinaryByteOperationInProgress<N> {
+        let (b, nextState) = state.pop(stack)
+        return BinaryByteOperationInProgress(
+            a: b,
+            b: a,
+            state: nextState
+        )
+    }
 }
 
 struct UnaryWordOperationInProgress<N: Operand> {
@@ -1163,7 +1239,6 @@ struct UnaryWordOperationInProgress<N: Operand> {
             state: nextState
         )
     }
-    
 }
 
 struct UnaryOperationInProgress<N: Operand> {
@@ -1231,6 +1306,16 @@ struct BinaryWordOperationInProgress<N: Operand> {
     func writeToMemory(_ operation: (N, UInt16) -> (UInt16, N)) -> Processor {
         let (address, value) = operation(a, b)
         return state.writeToMemory(address, value).terminate()
+    }
+}
+
+struct BinaryByteOperationInProgress<N: Operand> {
+    let a: N
+    let b: UInt8
+    let state: InstructionState<N>
+    
+    func applyProgramCounter(_ operation: (UInt16, N, UInt8) -> UInt16) -> Processor {
+        state.jump(to: operation(state.programCounter, a, b)).terminate()
     }
 }
 
