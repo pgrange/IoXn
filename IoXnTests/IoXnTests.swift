@@ -771,7 +771,7 @@ struct Processor : Equatable {
 
     private func ldz<N: Operand>(_ instruction: Instruction<N>) -> Processor {
         return instruction
-            .pop().apply11( { a in memory.read(UInt16(a), as: N.self) } ).push()
+            .pop().readFromMemory( { a in UInt16(a) } ).push()
     }
 
     private func stz<N: Operand>(_ instruction: Instruction<N>) -> Processor {
@@ -782,8 +782,7 @@ struct Processor : Equatable {
     
     private func ldr<N: Operand>(_ instruction: Instruction<N>) -> Processor {
         return instruction
-            .popByte().apply11( { a in memory.read(programCounter &+ UInt16(a), as: N.self) } ).push()
-        //TODO define a readFromMemory method
+            .popByte().readFromMemory( { a in programCounter &+ UInt16(a) } ).push()
     }
 
     private func str<N: Operand>(_ instruction: Instruction<N>) -> Processor {
@@ -794,8 +793,7 @@ struct Processor : Equatable {
     
     private func lda<N: Operand>(_ instruction: Instruction<N>) -> Processor {
         return instruction
-            .popWord().apply11( { a in memory.read(a, as: N.self) } ).push()
-        //TODO define a readFromMemory method
+            .popWord().readFromMemory({ a in a }).push()
     }
 
     private func jmp<N: Operand>(_ instruction: Instruction<N>) -> Processor {
@@ -978,6 +976,10 @@ struct InstructionState<N: Operand> {
         return with(processor: processor.with(memory: processor.memory.write(address, value, as: N.self)))
     }
     
+    func readFromMemory(_ address: UInt16) -> N {
+        return processor.memory.read(address, as: N.self)
+    }
+    
     func jump(to pc: UInt16) -> InstructionState<N> {
         return with(processor: processor.with(programCounter: pc))
     }
@@ -1027,9 +1029,10 @@ struct UnaryWordOperationInProgress<N: Operand> {
     let a: UInt16
     let state: InstructionState<N>
     
-    func apply11(_ operation: (UInt16) -> N) -> OperationUnaryResult<N> {
+    func readFromMemory(_ operation: (UInt16) -> UInt16) -> OperationUnaryResult<N> {
+        let value = state.readFromMemory(operation(a))
         return OperationUnaryResult<N>(
-            result: operation(a),
+            result: value,
             state: state
         )
     }
@@ -1079,6 +1082,14 @@ struct UnaryOperationInProgress<N: Operand> {
         return OperationBinaryResult(
             resultA: resultA,
             resultB: resultB,
+            state: state
+        )
+    }
+    
+    func readFromMemory(_ operation: (N) -> UInt16) -> OperationUnaryResult<N> {
+        let value = state.readFromMemory(operation(a))
+        return OperationUnaryResult<N>(
+            result: value,
             state: state
         )
     }
