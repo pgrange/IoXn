@@ -579,7 +579,7 @@ struct IoXnProgramCounterTests {
             .step(Op.jsr)
         ).to(equal(Processor().with(
             programCounter: 12048,
-            returnStack: oneShortAsByteArray(12043)
+            returnStack: oneShortAsByteArray(12044)
         )))
         
         expect(Processor().with(programCounter: 12043)
@@ -587,7 +587,7 @@ struct IoXnProgramCounterTests {
             .step(Op.jsr2)
         ).to(equal(Processor().with(
             programCounter: 12055,
-            returnStack: oneShortAsByteArray(12043)
+            returnStack: oneShortAsByteArray(12044)
         )))
     }
     
@@ -600,7 +600,7 @@ struct IoXnProgramCounterTests {
             .push(0)
             .step(Op.jci)
         ).to(equal(Processor().with(
-            programCounter: 12045,
+            programCounter: 12046,
             memory: memory
         )))
         
@@ -635,7 +635,7 @@ struct IoXnProgramCounterTests {
             .step(Op.jsi)
         ).to(equal(Processor().with(
             programCounter: 12168,
-            returnStack: [0x2F, 0x0D], //12045
+            returnStack: [0x2F, 0x0E], //12046
             memory: memory
         )))
     }
@@ -1040,7 +1040,7 @@ struct Processor : Equatable {
     private func jsr<N: Operand>(_ instruction: Instruction<N>) -> Processor {
         return instruction
             .pop()
-            .applyProgramCounterSave({ pc, a in N.sizeInBytes == 1 ? jump(pc: pc, offset: UInt8(a)) : UInt16(a) })
+            .applyProgramCounterSave({ pc, a in (pc &+ 1, N.sizeInBytes == 1 ? jump(pc: pc, offset: UInt8(a)) : UInt16(a)) })
             .push(.returnStack)
     }
     
@@ -1051,7 +1051,7 @@ struct Processor : Equatable {
             .pop()
             .applyProgramCounter({
                 pc, a, b in
-                if a == 0 { pc &+ 2 }
+                if a == 0 { pc &+ 3 }
                 else { jump(pc: pc, offset: b) }
             })
     }
@@ -1073,7 +1073,7 @@ struct Processor : Equatable {
             .readShortFromMemory(programCounter + 1)
             .applyProgramCounter1({
                 pc, a in
-                (jump(pc: pc, offset: a), pc &+ 2)
+                (jump(pc: pc, offset: a), pc &+ 3)
             })
             .push(.returnStack)
     }
@@ -1440,10 +1440,10 @@ struct UnaryOperationInProgress<N: Operand> {
         )
     }
 
-    func applyProgramCounterSave(_ operation: (UInt16, N) -> UInt16) -> OperationProgramCounterResult<N> {
-        let pc = operation(state.programCounter, a)
+    func applyProgramCounterSave(_ operation: (UInt16, N) -> (UInt16, UInt16)) -> OperationProgramCounterResult<N> {
+        let (pcToSave, pc) = operation(state.programCounter, a)
         return OperationProgramCounterResult<N>(
-            savedProgramCounter: state.programCounter,
+            savedProgramCounter: pcToSave,
             state: state.jump(to: pc)
         )
     }
