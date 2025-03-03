@@ -33,7 +33,7 @@ struct IoXnArithemticTests {
             .push(255)
             .step(Op.inc2)
         ).to(equal(Processor().with(
-            workingStack: oneWordAsByteArray(1792)
+            workingStack: oneShortAsByteArray(1792)
         )))
         
         expect(Processor()
@@ -41,7 +41,7 @@ struct IoXnArithemticTests {
             .push(255)
             .step(Op.inc2k)
         ).to(equal(Processor().with(
-            workingStack: [6, 255] + oneWordAsByteArray(1792)
+            workingStack: [6, 255] + oneShortAsByteArray(1792)
         )))
     }
     
@@ -535,7 +535,7 @@ struct IoXnProgramCounterTests {
         )))
         
         expect(Processor().with(programCounter: 12043)
-            .push(oneWordAsByteArray(12050))
+            .push(oneShortAsByteArray(12050))
             .step(Op.jmp2)
         ).to(equal(Processor().with(
             programCounter: 12050
@@ -566,7 +566,7 @@ struct IoXnProgramCounterTests {
 
         expect(Processor().with(programCounter: 12043)
             .push(5)
-            .push(oneWordAsByteArray(12050))
+            .push(oneShortAsByteArray(12050))
             .step(Op.jcn2)
         ).to(equal(Processor().with(
             programCounter: 12050
@@ -579,15 +579,15 @@ struct IoXnProgramCounterTests {
             .step(Op.jsr)
         ).to(equal(Processor().with(
             programCounter: 12048,
-            returnStack: oneWordAsByteArray(12043)
+            returnStack: oneShortAsByteArray(12043)
         )))
         
         expect(Processor().with(programCounter: 12043)
-            .push(oneWordAsByteArray(12055))
+            .push(oneShortAsByteArray(12055))
             .step(Op.jsr2)
         ).to(equal(Processor().with(
             programCounter: 12055,
-            returnStack: oneWordAsByteArray(12043)
+            returnStack: oneShortAsByteArray(12043)
         )))
     }
     
@@ -705,19 +705,19 @@ struct Op {
     static let jsr2: UInt8 = 0x2e
 }
 
-func oneWordAsByteArray(_ value: UInt16) -> [UInt8] {
+func oneShortAsByteArray(_ value: UInt16) -> [UInt8] {
     let highByte: UInt8 = UInt8((value & 0xFF00) >> 8)
     let lowByte: UInt8 = UInt8(value & 0x00FF)
     return [highByte, lowByte]
 }
 
-func oneWordAsTwoBytes(_ value: UInt16) -> (UInt8, UInt8) {
+func oneShortAsTwoBytes(_ value: UInt16) -> (UInt8, UInt8) {
     let highByte: UInt8 = UInt8((value & 0xFF00) >> 8)
     let lowByte: UInt8 = UInt8(value & 0x00FF)
     return (highByte, lowByte)
 }
 
-func twoBytesAsOneWord(_ highByte: UInt8, _ lowByte: UInt8) -> UInt16 {
+func twoBytesAsOneShort(_ highByte: UInt8, _ lowByte: UInt8) -> UInt16 {
     return UInt16(highByte) << 8 | UInt16(lowByte)
 }
 
@@ -796,7 +796,7 @@ struct Memory : Equatable {
         } else {
             let high = data[address] ?? 0
             let low = data[address &+ 1] ?? 0
-            return N(twoBytesAsOneWord(high, low))
+            return N(twoBytesAsOneShort(high, low))
         }
     }
     
@@ -805,7 +805,7 @@ struct Memory : Equatable {
         if (N.sizeInBytes == 1) {
             data[address] = UInt8(value)
         } else {
-            let (high, low) = oneWordAsTwoBytes(UInt16(value))
+            let (high, low) = oneShortAsTwoBytes(UInt16(value))
             data[address] = high
             data[address &+ 1] = low
         }
@@ -1008,12 +1008,12 @@ struct Processor : Equatable {
     
     private func lda<N: Operand>(_ instruction: Instruction<N>) -> Processor {
         return instruction
-            .popWord().readFromMemory({ a in a }).push()
+            .popShort().readFromMemory({ a in a }).push()
     }
     
     private func sta<N: Operand>(_ instruction: Instruction<N>) -> Processor {
         return instruction
-            .popWord().pop()
+            .popShort().pop()
             .writeToMemory({ a, b in (b, a) })
     }
     
@@ -1047,7 +1047,7 @@ struct Processor : Equatable {
     private func jci(_ instruction: Instruction<UInt8>) -> Processor {
         //TODO do not access programCounter directly from here
         return instruction
-            .readWordFromMemory(programCounter + 1)
+            .readShortFromMemory(programCounter + 1)
             .pop()
             .applyProgramCounter({
                 pc, a, b in
@@ -1059,7 +1059,7 @@ struct Processor : Equatable {
     private func jmi(_ instruction: Instruction<UInt8>) -> Processor {
         //TODO do not access programCounter directly from here
         return instruction
-            .readWordFromMemory(programCounter + 1)
+            .readShortFromMemory(programCounter + 1)
             .applyProgramCounter({
                 pc, a in
                 if a == 0 { pc &+ 2 }
@@ -1070,7 +1070,7 @@ struct Processor : Equatable {
     private func jsi(_ instruction: Instruction<UInt16>) -> Processor {
         //TODO do not access programCounter directly from here
         return instruction
-            .readWordFromMemory(programCounter + 1)
+            .readShortFromMemory(programCounter + 1)
             .applyProgramCounter1({
                 pc, a in
                 (jump(pc: pc, offset: a), pc &+ 2)
@@ -1252,7 +1252,7 @@ struct InstructionState<N: Operand> {
         return (value, with(processor: nextProcessor, popped: popped + head))
     }
     
-    func popWord(_ stack: Stack = .workingStack) -> (UInt16, InstructionState) {
+    func popShort(_ stack: Stack = .workingStack) -> (UInt16, InstructionState) {
         let (head, nextProcessor) = processor.pop(2, realStack(stack))
         let value: UInt16 = .fromByteArray(head)
         return (value, with(processor: nextProcessor, popped: popped + head))
@@ -1266,7 +1266,7 @@ struct InstructionState<N: Operand> {
         )
     }
 
-    func pushWord(_ value: UInt16, _ stack: Stack = .workingStack) -> InstructionState<N> {
+    func pushShort(_ value: UInt16, _ stack: Stack = .workingStack) -> InstructionState<N> {
         let nextProcessor = keepStack ? processor.push(popped.reversed(), realStack(stack)) : processor
         return with(
             processor: nextProcessor.push(value.toByteArray(), realStack(stack)),
@@ -1282,7 +1282,7 @@ struct InstructionState<N: Operand> {
         return processor.memory.read(address, as: N.self)
     }
     
-    func readWordFromMemory(_ address: UInt16) -> UInt16 {
+    func readShortFromMemory(_ address: UInt16) -> UInt16 {
         return processor.memory.read(address, as: UInt16.self)
     }
     
@@ -1322,17 +1322,17 @@ struct Instruction<N: Operand> {
         )
     }
     
-    func popWord() -> UnaryWordOperationInProgress<N> {
-        let (a, nextState) = state.popWord()
-        return UnaryWordOperationInProgress(
+    func popShort() -> UnaryShortOperationInProgress<N> {
+        let (a, nextState) = state.popShort()
+        return UnaryShortOperationInProgress(
             a: a,
             state: nextState
         )
     }
     
-    func readWordFromMemory(_ address: UInt16) -> UnaryWordOperationInProgress<N> {
-        let value = state.readWordFromMemory(address)
-        return UnaryWordOperationInProgress(
+    func readShortFromMemory(_ address: UInt16) -> UnaryShortOperationInProgress<N> {
+        let value = state.readShortFromMemory(address)
+        return UnaryShortOperationInProgress(
             a: value,
             state: state
         )
@@ -1365,7 +1365,7 @@ struct UnaryByteOperationInProgress<N: Operand> {
     }
 }
 
-struct UnaryWordOperationInProgress<N: Operand> {
+struct UnaryShortOperationInProgress<N: Operand> {
     let a: UInt16
     let state: InstructionState<N>
     
@@ -1377,9 +1377,9 @@ struct UnaryWordOperationInProgress<N: Operand> {
         )
     }
     
-    func pop(_ stack: Stack = .workingStack) -> BinaryWordOperationInProgress<N> {
+    func pop(_ stack: Stack = .workingStack) -> BinaryShortOperationInProgress<N> {
         let (b, nextState) = state.pop(stack)
-        return BinaryWordOperationInProgress(
+        return BinaryShortOperationInProgress(
             a: b,
             b: a,
             state: nextState
@@ -1473,7 +1473,7 @@ struct UnaryOperationInProgress<N: Operand> {
     }
 }
 
-struct BinaryWordOperationInProgress<N: Operand> {
+struct BinaryShortOperationInProgress<N: Operand> {
     let a: N
     let b: UInt16
     let state: InstructionState<N>
@@ -1588,7 +1588,7 @@ struct OperationProgramCounterResult<N: Operand> {
     let state: InstructionState<N>
     
     func push(_ stack: Stack = .workingStack) -> Processor {
-        return state.pushWord(savedProgramCounter, stack).terminate()
+        return state.pushShort(savedProgramCounter, stack).terminate()
     }
 }
 
@@ -1649,7 +1649,7 @@ extension UInt8: Operand {
 
 extension UInt16: Operand {
     static func fromByteArray(_ byteArray: [UInt8]) -> UInt16 {
-        twoBytesAsOneWord(byteArray[0], byteArray[1])
+        twoBytesAsOneShort(byteArray[0], byteArray[1])
     }
     
     static var sizeInBytes: Int {
@@ -1657,6 +1657,6 @@ extension UInt16: Operand {
     }
     
     func toByteArray() -> [UInt8] {
-        oneWordAsByteArray(self)
+        oneShortAsByteArray(self)
     }
 }
