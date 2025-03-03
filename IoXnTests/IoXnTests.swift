@@ -10,17 +10,20 @@ import Nimble
 
 struct IoXnArithemticTests {
     
+    
+
+    
     @Test func opcodeInc() async throws {
         expect(Processor()
             .push(6)
-            .step(.inc)
+            .step(Op.inc)
         ).to(equal(Processor().with(
             workingStack: [7]
         )))
         
         expect(Processor()
             .push(6)
-            .step(.inck)
+            .step(Op.inck)
         ).to(equal(Processor().with(
             workingStack: [6, 7]
         )))
@@ -28,7 +31,7 @@ struct IoXnArithemticTests {
         expect(Processor()
             .push(6)
             .push(255)
-            .step(.inc2)
+            .step(Op.inc2)
         ).to(equal(Processor().with(
             workingStack: oneWordAsByteArray(1792)
         )))
@@ -36,7 +39,7 @@ struct IoXnArithemticTests {
         expect(Processor()
             .push(6)
             .push(255)
-            .step(.inc2k)
+            .step(Op.inc2k)
         ).to(equal(Processor().with(
             workingStack: [6, 255] + oneWordAsByteArray(1792)
         )))
@@ -46,7 +49,7 @@ struct IoXnArithemticTests {
         expect(Processor()
             .push(1)
             .push(2)
-            .step(.add)
+            .step(Op.add)
         ).to(equal(Processor().with(
             workingStack: [3]
         )))
@@ -54,7 +57,7 @@ struct IoXnArithemticTests {
         expect(Processor()
             .push(255)
             .push(1)
-            .step(.add)
+            .step(Op.add)
         ).to(equal(Processor().with(
             workingStack: [0]
         )))
@@ -64,7 +67,7 @@ struct IoXnArithemticTests {
         expect(Processor()
             .push(2)
             .push(1)
-            .step(.sub)
+            .step(Op.sub)
         ).to(equal(Processor().with(
             workingStack: [1]
         )))
@@ -72,7 +75,7 @@ struct IoXnArithemticTests {
         expect(Processor()
             .push(1)
             .push(2)
-            .step(.sub)
+            .step(Op.sub)
         ).to(equal(Processor().with(
             workingStack: [255]
         )))
@@ -82,7 +85,7 @@ struct IoXnArithemticTests {
         expect(Processor()
             .push(2)
             .push(2)
-            .step(.mul)
+            .step(Op.mul)
         ).to(equal(Processor().with(
             workingStack: [4]
         )))
@@ -90,7 +93,7 @@ struct IoXnArithemticTests {
         expect(Processor()
             .push(130)
             .push(2)
-            .step(.mul)
+            .step(Op.mul)
         ).to(equal(Processor().with(
             workingStack: [4]
         )))
@@ -100,7 +103,7 @@ struct IoXnArithemticTests {
         expect(Processor()
             .push(6)
             .push(2)
-            .step(.div)
+            .step(Op.div)
         ).to(equal(Processor().with(
             workingStack: [3]
         )))
@@ -108,7 +111,7 @@ struct IoXnArithemticTests {
         expect(Processor()
             .push(255)
             .push(2)
-            .step(.div)
+            .step(Op.div)
         ).to(equal(Processor().with(
             workingStack: [127]
         )))
@@ -116,7 +119,7 @@ struct IoXnArithemticTests {
         expect(Processor()
             .push(12)
             .push(0)
-            .step(.div)
+            .step(Op.div)
         ).to(equal(Processor().with(
             workingStack: [0]
         )))
@@ -130,7 +133,7 @@ struct IoXnStackTests {
             .push(1)
             .push(2)
             .push(3)
-            .step(.pop)
+            .step(Op.pop)
         ).to(equal(Processor().with(
             workingStack: [1, 2]
         )))
@@ -139,7 +142,7 @@ struct IoXnStackTests {
             .push(1)
             .push(2)
             .push(3)
-            .step(.popk)
+            .step(Op.popk)
         ).to(equal(Processor().with(
             workingStack: [1, 2, 3]
         )))
@@ -148,7 +151,7 @@ struct IoXnStackTests {
             .push(1)
             .push(2)
             .push(3)
-            .step(.pop2)
+            .step(Op.pop2)
         ).to(equal(Processor().with(
             workingStack: [1]
         )))
@@ -157,7 +160,7 @@ struct IoXnStackTests {
             .push(1, .returnStack)
             .push(2, .returnStack)
             .push(3, .returnStack)
-            .step(.pop2kr)
+            .step(Op.pop2kr)
         ).to(equal(Processor().with(
             returnStack: [1, 2, 3]
         )))
@@ -169,7 +172,7 @@ struct IoXnStackTests {
             .push(1)
             .push(2)
             .push(3)
-            .step(.nip)
+            .step(Op.nip)
         ).to(equal(Processor().with(
             workingStack: [1, 3]
         )))
@@ -180,7 +183,7 @@ struct IoXnStackTests {
             .push(1)
             .push(2)
             .push(3)
-            .step(.swp)
+            .step(Op.swp)
         ).to(equal(Processor().with(
             workingStack: [1, 3, 2]
         )))
@@ -191,7 +194,7 @@ struct IoXnStackTests {
             .push(1)
             .push(2)
             .push(3)
-            .step(.rot)
+            .step(Op.rot)
         
         expect(result).to(equal(Processor().with(
             workingStack: [2, 3, 1]
@@ -202,7 +205,7 @@ struct IoXnStackTests {
         let result = Processor()
             .push(1)
             .push(2)
-            .step(.dup)
+            .step(Op.dup)
         
         expect(result).to(equal(Processor().with(
             workingStack: [1, 2, 2]
@@ -213,7 +216,7 @@ struct IoXnStackTests {
         let processor = Processor()
             .push(1)
             .push(2)
-            .step(.ovr)
+            .step(Op.ovr)
         
         expect(processor).to(equal(Processor().with(
             workingStack: [1, 2, 1]
@@ -223,14 +226,14 @@ struct IoXnStackTests {
     @Test func opcodeSth() async throws {
         expect(Processor()
             .push(2)
-            .step(.sth)
+            .step(Op.sth)
         ).to(equal(Processor().with(
             returnStack: [2]
         )))
         
         expect(Processor()
             .push(2, .returnStack)
-            .step(.sthr)
+            .step(Op.sthr)
         ).to(equal(Processor().with(
             workingStack: [2]
         )))
@@ -242,14 +245,14 @@ struct IoXnLogicTests {
         expect(Processor()
             .push(1)
             .push(2)
-            .step(.equ)
+            .step(Op.equ)
         ).to(equal(Processor().with(
             workingStack: [0]
         )))
         expect(Processor()
             .push(1)
             .push(1)
-            .step(.equ)
+            .step(Op.equ)
         ).to(equal(Processor().with(
             workingStack: [1]
         )))
@@ -258,14 +261,14 @@ struct IoXnLogicTests {
         expect(Processor()
             .push(1)
             .push(2)
-            .step(.neq)
+            .step(Op.neq)
         ).to(equal(Processor().with(
             workingStack: [1]
         )))
         expect(Processor()
             .push(1)
             .push(1)
-            .step(.neq)
+            .step(Op.neq)
         ).to(equal(Processor().with(
             workingStack: [0]
         )))
@@ -274,21 +277,21 @@ struct IoXnLogicTests {
         expect(Processor()
             .push(1)
             .push(2)
-            .step(.gth)
+            .step(Op.gth)
         ).to(equal(Processor().with(
             workingStack: [0]
         )))
         expect(Processor()
             .push(2)
             .push(1)
-            .step(.gth)
+            .step(Op.gth)
         ).to(equal(Processor().with(
             workingStack: [1]
         )))
         expect(Processor()
             .push(1)
             .push(1)
-            .step(.gth)
+            .step(Op.gth)
         ).to(equal(Processor().with(
             workingStack: [0]
         )))
@@ -298,21 +301,21 @@ struct IoXnLogicTests {
         expect(Processor()
             .push(1)
             .push(2)
-            .step(.lth)
+            .step(Op.lth)
         ).to(equal(Processor().with(
             workingStack: [1]
         )))
         expect(Processor()
             .push(2)
             .push(1)
-            .step(.lth)
+            .step(Op.lth)
         ).to(equal(Processor().with(
             workingStack: [0]
         )))
         expect(Processor()
             .push(1)
             .push(1)
-            .step(.lth)
+            .step(Op.lth)
         ).to(equal(Processor().with(
             workingStack: [0]
         )))
@@ -322,7 +325,7 @@ struct IoXnLogicTests {
         expect(Processor()
             .push(0x0F)
             .push(0xF2)
-            .step(.and)
+            .step(Op.and)
         ).to(equal(Processor().with(
             workingStack: [0x02]
         )))
@@ -332,7 +335,7 @@ struct IoXnLogicTests {
         expect(Processor()
             .push(0x0F)
             .push(0xD2)
-            .step(.ora)
+            .step(Op.ora)
         ).to(equal(Processor().with(
             workingStack: [0xDF]
         )))
@@ -342,7 +345,7 @@ struct IoXnLogicTests {
         expect(Processor()
             .push(0x0F)
             .push(0xD2)
-            .step(.eor)
+            .step(Op.eor)
         ).to(equal(Processor().with(
             workingStack: [0xDD]
         )))
@@ -352,7 +355,7 @@ struct IoXnLogicTests {
         expect(Processor()
             .push(0x34)
             .push(0x10)
-            .step(.sft)
+            .step(Op.sft)
         ).to(equal(Processor().with(
             workingStack: [0x68]
         )))
@@ -364,12 +367,12 @@ struct IoXnLogicTests {
 struct IoXnMemoryTests {
     @Test func opcodeLdz() async throws {
         let initialMemory = Memory()
-            .write(UInt8(2), 250)
-            .write(UInt8(3), 12)
+            .write(2, 250)
+            .write(3, 12)
         
         expect(Processor().with(memory: initialMemory)
             .push(2)
-            .step(.ldz)
+            .step(Op.ldz)
         ).to(equal(Processor().with(
             workingStack: [250],
             memory: initialMemory
@@ -377,7 +380,7 @@ struct IoXnMemoryTests {
 
         expect(Processor().with(memory: initialMemory)
             .push(0).push(2)
-            .step(.ldz2)
+            .step(Op.ldz2)
         ).to(equal(Processor().with(
             workingStack: [250, 12],
             memory: initialMemory
@@ -389,32 +392,32 @@ struct IoXnMemoryTests {
         expect(Processor()
             .push(2)
             .push(250)
-            .step(.stz)
+            .step(Op.stz)
         ).to(equal(Processor().with(
-            memory: Memory().write(UInt8(250), 2)
+            memory: Memory().write(250, 2)
         )))
         
         expect(Processor()
             .push(2)
             .push(3)
             .push(250)
-            .step(.stz2)
+            .step(Op.stz2)
         ).to(equal(Processor().with(
             memory: Memory()
-                .write(UInt8(250), 2)
-                .write(UInt8(251), 3)
+                .write(250, 2)
+                .write(251, 3)
         )))
 
     }
     
     @Test func opcodeLdr() async throws {
         let initialMemory = Memory()
-            .write(UInt16(350), 250)
-            .write(UInt16(351), 12)
+            .write(350, 250)
+            .write(351, 12)
         
         expect(Processor().with(programCounter: 340, memory: initialMemory)
             .push(10)
-            .step(.ldr)
+            .step(Op.ldr)
         ).to(equal(Processor().with(
             programCounter: 340,
             workingStack: [250],
@@ -423,7 +426,7 @@ struct IoXnMemoryTests {
 
         expect(Processor().with(programCounter: 340, memory: initialMemory)
             .push(10)
-            .step(.ldr2)
+            .step(Op.ldr2)
         ).to(equal(Processor().with(
             programCounter: 340,
             workingStack: [250, 12],
@@ -435,34 +438,34 @@ struct IoXnMemoryTests {
         expect(Processor().with(programCounter: 340)
             .push(2)
             .push(10)
-            .step(.str)
+            .step(Op.str)
         ).to(equal(Processor().with(
             programCounter: 340,
-            memory: Memory().write(UInt16(350), 2)
+            memory: Memory().write(350, 2)
         )))
         
         expect(Processor().with(programCounter: 340)
             .push(2)
             .push(3)
             .push(10)
-            .step(.str2)
+            .step(Op.str2)
         ).to(equal(Processor().with(
             programCounter: 340,
             memory: Memory()
-                .write(UInt16(350), 2)
-                .write(UInt16(351), 3)
+                .write(350, 2)
+                .write(351, 3)
         )))
 
     }
     
     @Test func opcodeLda() async throws {
         let initialMemory = Memory()
-            .write(UInt16(350), 250)
+            .write(350, 250)
         
         expect(Processor().with(memory: initialMemory)
             .push(0x01)
             .push(0x5e)
-            .step(.lda)
+            .step(Op.lda)
         ).to(equal(Processor().with(
             workingStack: [250],
             memory: initialMemory
@@ -474,31 +477,31 @@ struct IoXnMemoryTests {
             .push(2)
             .push(0x01)
             .push(0x5e)
-            .step(.sta)
+            .step(Op.sta)
         ).to(equal(Processor().with(
-            memory: Memory().write(UInt16(350), 2)
+            memory: Memory().write(350, 2)
         )))
         
         expect(Processor().with(programCounter: 340)
             .push(2)
             .push(3)
             .push(10)
-            .step(.str2)
+            .step(Op.str2)
         ).to(equal(Processor().with(
             programCounter: 340,
             memory: Memory()
-                .write(UInt16(350), 2)
-                .write(UInt16(351), 3)
+                .write(350, 2)
+                .write(351, 3)
         )))
     }
     
     @Test func opcodeLit() async throws {
         let memory = Memory()
-            .write(UInt16(12044), 12)
-            .write(UInt16(12045), 125)
+            .write(12044, 12)
+            .write(12045, 125)
         
         expect(Processor().with(programCounter: 12043, memory: memory)
-            .step(.lit)
+            .step(Op.lit)
         ).to(equal(Processor().with(
             programCounter: 12045,
             workingStack: [12],
@@ -506,7 +509,7 @@ struct IoXnMemoryTests {
         )))
         
         expect(Processor().with(programCounter: 12043, memory: memory)
-            .step(.lit2)
+            .step(Op.lit2)
         ).to(equal(Processor().with(
             programCounter: 12045,
             workingStack: [12, 125],
@@ -519,14 +522,14 @@ struct IoXnProgramCounterTests {
     @Test func opcodeJmp() async throws {
         expect(Processor().with(programCounter: 12043)
             .push(2)
-            .step(.jmp)
+            .step(Op.jmp)
         ).to(equal(Processor().with(
             programCounter: 12045
         )))
         
         expect(Processor().with(programCounter: 12043)
             .push(0 &- 2)
-            .step(.jmp)
+            .step(Op.jmp)
         ).to(equal(Processor().with(
             programCounter: 12041
         )))
@@ -535,7 +538,7 @@ struct IoXnProgramCounterTests {
         expect(Processor().with(programCounter: 12043)
             .push(5)
             .push(2)
-            .step(.jcn)
+            .step(Op.jcn)
         ).to(equal(Processor().with(
             programCounter: 12045
         )))
@@ -543,14 +546,14 @@ struct IoXnProgramCounterTests {
         expect(Processor().with(programCounter: 12043)
             .push(0)
             .push(2)
-            .step(.jcn).programCounter
+            .step(Op.jcn).programCounter
         ).to(equal(12043))
     }
     
     @Test func opcodeJsr() async throws {
         expect(Processor().with(programCounter: 12043)
             .push(5)
-            .step(.jsr)
+            .step(Op.jsr)
         ).to(equal(Processor().with(
             programCounter: 12048,
             returnStack: oneWordAsByteArray(12043)
@@ -559,12 +562,12 @@ struct IoXnProgramCounterTests {
     
     @Test func opcodeJci() async throws {
         let memory = Memory()
-            .write(UInt16(12044), 0)
-            .write(UInt16(12045), 125)
+            .write(12044, 0)
+            .write(12045, 125)
         
         expect(Processor().with(programCounter: 12043, memory: memory)
             .push(0)
-            .step(.jci)
+            .step(Op.jci)
         ).to(equal(Processor().with(
             programCounter: 12045,
             memory: memory
@@ -572,7 +575,7 @@ struct IoXnProgramCounterTests {
         
         expect(Processor().with(programCounter: 12043, memory: memory)
             .push(1)
-            .step(.jci)
+            .step(Op.jci)
         ).to(equal(Processor().with(
             programCounter: 12168,
             memory: memory
@@ -581,11 +584,11 @@ struct IoXnProgramCounterTests {
     
     @Test func opcodeJmi() async throws {
         let memory = Memory()
-            .write(UInt16(12044), 0)
-            .write(UInt16(12045), 125)
+            .write(12044, 0)
+            .write(12045, 125)
         
         expect(Processor().with(programCounter: 12043, memory: memory)
-            .step(.jmi)
+            .step(Op.jmi)
         ).to(equal(Processor().with(
             programCounter: 12168,
             memory: memory
@@ -594,17 +597,78 @@ struct IoXnProgramCounterTests {
     
     @Test func opcodeJsi() async throws {
         let memory = Memory()
-            .write(UInt16(12044), 0)
-            .write(UInt16(12045), 125)
+            .write(12044, 0)
+            .write(12045, 125)
         
         expect(Processor().with(programCounter: 12043, memory: memory)
-            .step(.jsi)
+            .step(Op.jsi)
         ).to(equal(Processor().with(
             programCounter: 12168,
             returnStack: [0x2F, 0x0D], //12045
             memory: memory
         )))
     }
+}
+
+struct Op {
+    static let inc: UInt8    = 0x01
+    static let inc2: UInt8   = 0x21
+    static let incr: UInt8   = 0x41
+    static let inc2r: UInt8  = 0x61
+    static let inck: UInt8   = 0x81
+    static let inc2k: UInt8  = 0xa1
+    static let inckr: UInt8  = 0xc1
+    static let inc2kr: UInt8 = 0xe1
+
+    static let pop: UInt8    = 0x02
+    static let pop2: UInt8   = 0x22
+    static let popk: UInt8   = 0x82
+    static let pop2kr: UInt8 = 0xe2
+
+    static let nip: UInt8 = 0x03
+    static let swp: UInt8 = 0x04
+    static let rot: UInt8 = 0x05
+    static let dup: UInt8 = 0x06
+    static let ovr: UInt8 = 0x07
+    static let equ: UInt8 = 0x08
+    static let neq: UInt8 = 0x09
+    static let gth: UInt8 = 0x0a
+    static let lth: UInt8 = 0x0b
+
+    static let add: UInt8 = 0x18
+    static let sub: UInt8 = 0x19
+    static let mul: UInt8 = 0x1a
+    static let div: UInt8 = 0x1b
+
+    static let and: UInt8 = 0x1c
+    static let ora: UInt8 = 0x1d
+    static let eor: UInt8 = 0x1e
+    static let sft: UInt8 = 0x1f
+
+    static let sth: UInt8 = 0x0f
+    static let sthr: UInt8 = 0x4f
+
+    static let ldz: UInt8  = 0x10
+    static let stz: UInt8  = 0x11
+    static let ldr: UInt8  = 0x12
+    static let str: UInt8  = 0x13
+    static let lda: UInt8  = 0x14
+    static let sta: UInt8  = 0x15
+
+    static let jci: UInt8  = 0x20
+    static let jmi: UInt8  = 0x40
+    static let jsi: UInt8  = 0x60
+    static let lit: UInt8  = 0x80
+    static let lit2: UInt8 = 0xa0
+
+    static let ldz2: UInt8 = 0x30
+    static let stz2: UInt8 = 0x31
+    static let ldr2: UInt8 = 0x32
+    static let str2: UInt8 = 0x33
+
+    static let jmp: UInt8 = 0x0c
+    static let jcn: UInt8 = 0x0d
+    static let jsr: UInt8 = 0x0e
 }
 
 func oneWordAsByteArray(_ value: UInt16) -> [UInt8] {
@@ -621,68 +685,6 @@ func oneWordAsTwoBytes(_ value: UInt16) -> (UInt8, UInt8) {
 
 func twoBytesAsOneWord(_ highByte: UInt8, _ lowByte: UInt8) -> UInt16 {
     return UInt16(highByte) << 8 | UInt16(lowByte)
-}
-
-enum CompleteOpcode: UInt8 {
-    case inc    = 0x01
-    case inc2   = 0x21
-    case incr   = 0x41
-    case inc2r  = 0x61
-    case inck   = 0x81
-    case inc2k  = 0xa1
-    case inckr  = 0xc1
-    case inc2kr = 0xe1
-    
-    case pop    = 0x02
-    case pop2   = 0x22
-    case popk   = 0x82
-    case pop2kr = 0xe2
-    
-    case nip = 0x03
-    case swp = 0x04
-    case rot = 0x05
-    case dup = 0x06
-    case ovr = 0x07
-    case equ = 0x08
-    case neq = 0x09
-    case gth = 0x0a
-    case lth = 0x0b
-    
-    
-    case add = 0x18
-    case sub = 0x19
-    case mul = 0x1a
-    case div = 0x1b
-    
-    case and = 0x1c
-    case ora = 0x1d
-    case eor = 0x1e
-    case sft = 0x1f
-    
-    case sth = 0x0f
-    case sthr = 0x4f
-    
-    case ldz  = 0x10
-    case stz  = 0x11
-    case ldr  = 0x12
-    case str  = 0x13
-    case lda  = 0x14
-    case sta  = 0x15
-    
-    case jci  = 0x20
-    case jmi  = 0x40
-    case jsi  = 0x60
-    case lit  = 0x80
-    case lit2 = 0xa0
-    
-    case ldz2 = 0x30
-    case stz2 = 0x31
-    case ldr2 = 0x32
-    case str2  = 0x33
-    
-    case jmp = 0x0c
-    case jcn = 0x0d
-    case jsr = 0x0e
 }
 
 enum Opcode: UInt8 {
@@ -764,7 +766,7 @@ struct Memory : Equatable {
         }
     }
     
-    func write<N: Operand>(_ address: UInt16, _ value: N, as type: N.Type) -> Memory {
+    func write<N: Operand>(_ address: UInt16, _ value: N) -> Memory {
         var data = self.data
         if (N.sizeInBytes == 1) {
             data[address] = UInt8(value)
@@ -776,14 +778,9 @@ struct Memory : Equatable {
         return Memory(data: data)
     }
     
-    func write(_ address: UInt16, _ value: UInt8) -> Memory {
-        var data = self.data
-        data[address] = value
-        return Memory(data: data)
-    }
-    
-    func write(_ address: UInt8, _ value: UInt8) -> Memory {
-        return self.write(UInt16(address), value)
+    func write(_ address: UInt16, _ value: Int) -> Memory {
+        //sugar method for when calling with literal
+        return self.write(address, UInt8(value))
     }
     
     static func == (lhs: Memory, rhs: Memory) -> Bool {
@@ -832,13 +829,13 @@ struct Processor : Equatable {
     }
     
     func push(_ value: [UInt8], _ stack: Stack = .workingStack) -> Processor {
-        switch stack {
+        return switch stack {
         case .workingStack:
-            return self.with(
+            self.with(
                 workingStack: workingStack + value
             )
         case .returnStack:
-            return self.with(
+            self.with(
                 returnStack: returnStack + value
             )
         }
@@ -987,12 +984,14 @@ struct Processor : Equatable {
     }
     
     private func jmp<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        // TODO FIXME absolute address in short mode
         return instruction
             .pop()
             .applyProgramCounter( { pc, a in jump(pc: pc, offset: UInt8(a)) } )
     }
     
     private func jcn<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        // TODO FIXME absolute address in short mode
         return instruction
             .pop().pop()
             .applyProgramCounter( { pc, a, b in a != 0
@@ -1002,6 +1001,7 @@ struct Processor : Equatable {
     }
     
     private func jsr<N: Operand>(_ instruction: Instruction<N>) -> Processor {
+        // TODO FIXME absolute address in short mode
         return instruction
             .popByte()
             .applyProgramCounterSave({ pc, a in jump(pc: pc, offset: UInt8(a)) })
@@ -1048,6 +1048,16 @@ struct Processor : Equatable {
             .readFromMemory(programCounter + 1)
             .applyProgramCounter1({ pc, a in (pc &+ 2, a) })
             .push()
+    }
+    
+    private func jump(pc: UInt16, offset: UInt8) -> UInt16 {
+        return jump(
+            pc: pc,
+            offset: offset < 128 ? UInt16(offset) : UInt16(offset) | 0xFF00)
+    }
+    
+    private func jump(pc: UInt16, offset: UInt16) -> UInt16 {
+        return pc &+ offset
     }
     
     func step<N: Operand>(for: N.Type, reverseStack: Bool, keepStack: Bool, opcode: Opcode) -> Processor {
@@ -1127,45 +1137,33 @@ struct Processor : Equatable {
         }
     }
     
-    func step(_ opcodeWithModifiers: CompleteOpcode) -> Processor {
-        let keep = opcodeWithModifiers.rawValue & 0x80 == 0x00 ? false : true
-        let reverse = opcodeWithModifiers.rawValue & 0x40 == 0x00 ? false : true
-        let word = opcodeWithModifiers.rawValue & 0x20 == 0x00 ? false : true
-        switch opcodeWithModifiers {
-            
-        case .jci:
-            return jci(Instruction<UInt8>(self))
-        case .jmi:
-            return jmi(Instruction<UInt8>(self))
-        case .jsi:
-            return jsi(Instruction<UInt16>(self))
-        case .lit, .lit2:
-            let opcode: Opcode = Opcode(rawValue: opcodeWithModifiers.rawValue & 0x9F)!
-            if word {
-                return step(for: UInt16.self, reverseStack: reverse, keepStack: keep, opcode: opcode)
-            } else {
-                return step(for: UInt8.self, reverseStack: reverse, keepStack: keep, opcode: opcode)
-            }
-        default:
-            let opcode: Opcode = Opcode(rawValue: opcodeWithModifiers.rawValue & 0x1F)!
-            if word {
-                return step(for: UInt16.self, reverseStack: reverse, keepStack: keep, opcode: opcode)
-            } else {
-                return step(for: UInt8.self, reverseStack: reverse, keepStack: keep, opcode: opcode)
-            }
-        }
-    }
-    
-    private func jump(pc: UInt16, offset: UInt8) -> UInt16 {
-        let offsetAsUInt16: UInt16 = offset < 128
-        ? UInt16(offset)
-        : UInt16(offset) | 0xFF00
+    func step(_ rawOpcode: UInt8) -> Processor {
+        let keep = rawOpcode    & 0x80 == 0x00 ? false : true
+        let reverse = rawOpcode & 0x40 == 0x00 ? false : true
+        let size : any Operand.Type = rawOpcode & 0x20 == 0x00 ? UInt8.self : UInt16.self
         
-        return pc &+ offsetAsUInt16
-    }
-    
-    private func jump(pc: UInt16, offset: UInt16) -> UInt16 {
-        return pc &+ offset
+        switch rawOpcode {
+        case Opcode.jci.rawValue:
+            return jci(Instruction<UInt8>(self))
+        case Opcode.jmi.rawValue:
+            return jmi(Instruction<UInt8>(self))
+        case Opcode.jsi.rawValue:
+            return jsi(Instruction<UInt16>(self))
+        case Opcode.lit.rawValue, Opcode.lit.rawValue | 0x20:
+            return step(
+                for: size,
+                reverseStack: reverse,
+                keepStack: keep,
+                opcode: Opcode(rawValue: rawOpcode & 0x9F)!
+            )
+        default:
+            return step(
+                for: size,
+                reverseStack: reverse,
+                keepStack: keep,
+                opcode: Opcode(rawValue: rawOpcode & 0x1F)!
+            )
+        }
     }
 }
 
@@ -1241,7 +1239,7 @@ struct InstructionState<N: Operand> {
     }
     
     func writeToMemory(_ address: UInt16, _ value: N) -> InstructionState<N> {
-        return with(processor: processor.with(memory: processor.memory.write(address, value, as: N.self)))
+        return with(processor: processor.with(memory: processor.memory.write(address, value)))
     }
     
     func readFromMemory(_ address: UInt16) -> N {
