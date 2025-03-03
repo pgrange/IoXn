@@ -533,6 +533,13 @@ struct IoXnProgramCounterTests {
         ).to(equal(Processor().with(
             programCounter: 12041
         )))
+        
+        expect(Processor().with(programCounter: 12043)
+            .push(oneWordAsByteArray(12050))
+            .step(Op.jmp2)
+        ).to(equal(Processor().with(
+            programCounter: 12050
+        )))
     }
     @Test func opcodeJcn() async throws {
         expect(Processor().with(programCounter: 12043)
@@ -544,10 +551,26 @@ struct IoXnProgramCounterTests {
         )))
         
         expect(Processor().with(programCounter: 12043)
+            .push(5)
+            .push(0 &- 2)
+            .step(Op.jcn)
+        ).to(equal(Processor().with(
+            programCounter: 12041
+        )))
+        
+        expect(Processor().with(programCounter: 12043)
             .push(0)
             .push(2)
             .step(Op.jcn).programCounter
         ).to(equal(12043))
+
+        expect(Processor().with(programCounter: 12043)
+            .push(5)
+            .push(oneWordAsByteArray(12050))
+            .step(Op.jcn2)
+        ).to(equal(Processor().with(
+            programCounter: 12050
+        )))
     }
     
     @Test func opcodeJsr() async throws {
@@ -556,6 +579,14 @@ struct IoXnProgramCounterTests {
             .step(Op.jsr)
         ).to(equal(Processor().with(
             programCounter: 12048,
+            returnStack: oneWordAsByteArray(12043)
+        )))
+        
+        expect(Processor().with(programCounter: 12043)
+            .push(oneWordAsByteArray(12055))
+            .step(Op.jsr2)
+        ).to(equal(Processor().with(
+            programCounter: 12055,
             returnStack: oneWordAsByteArray(12043)
         )))
     }
@@ -669,6 +700,9 @@ struct Op {
     static let jmp: UInt8 = 0x0c
     static let jcn: UInt8 = 0x0d
     static let jsr: UInt8 = 0x0e
+    static let jmp2: UInt8 = 0x2c
+    static let jcn2: UInt8 = 0x2d
+    static let jsr2: UInt8 = 0x2e
 }
 
 func oneWordAsByteArray(_ value: UInt16) -> [UInt8] {
@@ -984,27 +1018,29 @@ struct Processor : Equatable {
     }
     
     private func jmp<N: Operand>(_ instruction: Instruction<N>) -> Processor {
-        // TODO FIXME absolute address in short mode
         return instruction
             .pop()
-            .applyProgramCounter( { pc, a in jump(pc: pc, offset: UInt8(a)) } )
+            .applyProgramCounter( {
+                pc, a in N.sizeInBytes == 1 ? jump(pc: pc, offset: UInt8(a)) : UInt16(a)
+            } )
     }
     
     private func jcn<N: Operand>(_ instruction: Instruction<N>) -> Processor {
-        // TODO FIXME absolute address in short mode
         return instruction
-            .pop().pop()
-            .applyProgramCounter( { pc, a, b in a != 0
-                ? jump(pc: pc, offset: UInt8(b))
-                : pc
+            .pop().popByte()
+            .applyProgramCounter( { pc, a, b in
+                if a != 0 {
+                    N.sizeInBytes == 1 ? jump(pc: pc, offset: UInt8(b)) : UInt16(b)
+                } else {
+                    pc
+                }
             })
     }
     
     private func jsr<N: Operand>(_ instruction: Instruction<N>) -> Processor {
-        // TODO FIXME absolute address in short mode
         return instruction
-            .popByte()
-            .applyProgramCounterSave({ pc, a in jump(pc: pc, offset: UInt8(a)) })
+            .pop()
+            .applyProgramCounterSave({ pc, a in N.sizeInBytes == 1 ? jump(pc: pc, offset: UInt8(a)) : UInt16(a) })
             .push(.returnStack)
     }
     
@@ -1371,6 +1407,15 @@ struct UnaryOperationInProgress<N: Operand> {
         let (b, nextState) = state.pop(stack)
         return BinaryOperationInProgress(
             a: b,
+            b: a,
+            state: nextState
+        )
+    }
+    
+    func popByte() -> BinaryOperationInProgress<N> {
+        let (b, nextState) = state.popByte()
+        return BinaryOperationInProgress(
+            a: N(b),
             b: a,
             state: nextState
         )
