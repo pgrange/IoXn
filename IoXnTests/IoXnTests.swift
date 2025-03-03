@@ -511,7 +511,7 @@ struct IoXnMemoryTests {
         expect(Processor().with(programCounter: 12043, memory: memory)
             .step(Op.lit2)
         ).to(equal(Processor().with(
-            programCounter: 12045,
+            programCounter: 12046,
             workingStack: [12, 125],
             memory: memory
         )))
@@ -1082,7 +1082,7 @@ struct Processor : Equatable {
         //TODO do not access programCounter directly from here
         return instruction
             .readFromMemory(programCounter + 1)
-            .applyProgramCounter1({ pc, a in (pc &+ 2, a) })
+            .applyProgramCounter1({ pc, a in (pc &+ 1 &+ UInt16(N.sizeInBytes), a) })
             .push()
     }
     
