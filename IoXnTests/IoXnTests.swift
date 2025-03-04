@@ -377,10 +377,10 @@ struct IoXnMemoryTests {
         )))
 
         expect(Processor().with(memory: initialMemory)
-            .push(0).push(2)
+            .push(2).push(2)
             .step(Op.ldz2)
         ).to(equal(Processor().with(
-            workingStack: [250, 12],
+            workingStack: [2, 250, 12],
             memory: initialMemory
         )))
 
@@ -984,7 +984,7 @@ struct Processor : Equatable {
 
     private func ldz<N: Operand>(_ instruction: Instruction<N>) -> Processor {
         return instruction
-            .pop().readFromMemory( { a in UInt16(a) } ).push()
+            .popByte().readFromMemory( { a in UInt16(a) } ).push()
     }
 
     private func stz<N: Operand>(_ instruction: Instruction<N>) -> Processor {
