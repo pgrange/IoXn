@@ -887,16 +887,16 @@ struct Processor : Equatable {
     }
     
     private func inc<N: Operand>(_ instruction: Instruction<N>) -> Processor {
-        let inc: N = .fromByteArray([UInt8](repeating: 0, count: N.sizeInBytes - 1) + [1])
-        return instruction.pop().apply11({ a in a &+ inc}).push()
+        let one: N = .fromByteArray([UInt8](repeating: 0, count: N.sizeInBytes - 1) + [1])
+        return instruction.pop().apply11({ a in a &+ one}).push()
     }
     
     private func pop<N: Operand>(_ instruction: Instruction<N>) -> Processor {
-        return instruction.pop().noop().drop()
+        return instruction.pop().noop()
     }
     
     private func nip<N: Operand>(_ instruction: Instruction<N>) -> Processor {
-        return instruction.pop().pop().noop().drop().push()
+        return instruction.pop().pop().apply21({ a, b in b }).push()
     }
 
     private func swp<N: Operand>(_ instruction: Instruction<N>) -> Processor {
@@ -1419,11 +1419,8 @@ struct UnaryOperationInProgress<N: Operand> {
         )
     }
     
-    func noop() -> OperationUnaryResult<N> {
-        return OperationUnaryResult<N>(
-            result: a,
-            state: state
-        )
+    func noop() -> Processor {
+        return state.terminate()
     }
     
     func applyProgramCounter(_ operation: (UInt16, N) -> UInt16) -> Processor {
@@ -1519,10 +1516,6 @@ struct BinaryOperationInProgress<N: Operand> {
     func applyProgramCounter(_ operation: (UInt16, N, N) -> UInt16) -> Processor {
         return state.jump(to: operation(state.programCounter, a, b)).terminate()
     }
-    
-    func noop() -> OperationBinaryResult<N> {
-        return OperationBinaryResult(resultA: a, resultB: b, state: state)
-    }
 
     func apply21(_ operation: (N, N) -> N) -> OperationUnaryResult<N> {
         return OperationUnaryResult(
@@ -1575,10 +1568,6 @@ struct OperationUnaryResult<N: Operand> {
     func push(_ stack: Stack = .workingStack) -> Processor {
         return state.push(result, stack).terminate()
     }
-    
-    func drop() -> Processor {
-        return state.terminate()
-    }
 }
 
 struct OperationProgramCounterResult<N: Operand> {
@@ -1599,13 +1588,6 @@ struct OperationBinaryResult<N: Operand> {
         return OperationUnaryResult(
             result: resultB,
             state: state.push(resultA)
-        )
-    }
-    
-    func drop() -> OperationUnaryResult<N> {
-        return OperationUnaryResult(
-            result: resultB,
-            state: state
         )
     }
 }
