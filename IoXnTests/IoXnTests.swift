@@ -360,8 +360,6 @@ struct IoXnLogicTests {
             workingStack: [0x68]
         )))
     }
-    
-    // TODO https://wiki.xxiivv.com/site/uxntal_reference.html#sft
 }
 
 struct IoXnMemoryTests {
@@ -1045,9 +1043,8 @@ struct Processor : Equatable {
     }
     
     private func jci(_ instruction: Instruction<UInt8>) -> Processor {
-        //TODO do not access programCounter directly from here
         return instruction
-            .readShortFromMemory(programCounter + 1)
+            .readNextShortFromMemory()
             .pop()
             .applyProgramCounter({
                 pc, a, b in
@@ -1057,9 +1054,8 @@ struct Processor : Equatable {
     }
     
     private func jmi(_ instruction: Instruction<UInt8>) -> Processor {
-        //TODO do not access programCounter directly from here
         return instruction
-            .readShortFromMemory(programCounter + 1)
+            .readNextShortFromMemory()
             .applyProgramCounter({
                 pc, a in
                 if a == 0 { pc &+ 2 }
@@ -1068,9 +1064,8 @@ struct Processor : Equatable {
     }
     
     private func jsi(_ instruction: Instruction<UInt16>) -> Processor {
-        //TODO do not access programCounter directly from here
         return instruction
-            .readShortFromMemory(programCounter + 1)
+            .readNextShortFromMemory()
             .applyProgramCounter1({
                 pc, a in
                 (jump(pc: pc, offset: a), pc &+ 3)
@@ -1079,9 +1074,8 @@ struct Processor : Equatable {
     }
     
     private func lit<N: Operand>(_ instruction: Instruction<N>) -> Processor {
-        //TODO do not access programCounter directly from here
         return instruction
-            .readFromMemory(programCounter + 1)
+            .readNextFromMemory()
             .applyProgramCounter1({ pc, a in (pc &+ 1 &+ UInt16(N.sizeInBytes), a) })
             .push()
     }
@@ -1278,12 +1272,16 @@ struct InstructionState<N: Operand> {
         return with(processor: processor.with(memory: processor.memory.write(address, value)))
     }
     
+    func readNextFromMemory() -> N {
+        return processor.memory.read(programCounter &+ 1, as: N.self)
+    }
+    
     func readFromMemory(_ address: UInt16) -> N {
         return processor.memory.read(address, as: N.self)
     }
     
-    func readShortFromMemory(_ address: UInt16) -> UInt16 {
-        return processor.memory.read(address, as: UInt16.self)
+    func readNextShortFromMemory() -> UInt16 {
+        return processor.memory.read(programCounter &+ 1, as: UInt16.self)
     }
     
     func jump(to pc: UInt16) -> InstructionState<N> {
@@ -1330,16 +1328,16 @@ struct Instruction<N: Operand> {
         )
     }
     
-    func readShortFromMemory(_ address: UInt16) -> UnaryShortOperationInProgress<N> {
-        let value = state.readShortFromMemory(address)
+    func readNextShortFromMemory() -> UnaryShortOperationInProgress<N> {
+        let value = state.readNextShortFromMemory()
         return UnaryShortOperationInProgress(
             a: value,
             state: state
         )
     }
     
-    func readFromMemory(_ address: UInt16) -> UnaryOperationInProgress<N> {
-        let value = state.readFromMemory(address)
+    func readNextFromMemory() -> UnaryOperationInProgress<N> {
+        let value = state.readNextFromMemory()
         return UnaryOperationInProgress(
             a: value,
             state: state
