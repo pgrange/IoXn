@@ -1536,6 +1536,15 @@ struct TernaryOperationInProgress<N: Operand> {
     }
 }
 
+struct OperationProgramCounterResult<N: Operand> {
+    let savedProgramCounter: UInt16
+    let state: InstructionState<N>
+    
+    func push(_ stack: Stack = .workingStack) -> Processor {
+        return state.pushShort(savedProgramCounter, stack).terminate()
+    }
+}
+
 struct OperationUnaryResult<N: Operand> {
     let result: N
     let state: InstructionState<N>
@@ -1555,67 +1564,33 @@ struct OperationUnaryResult<N: Operand> {
     }
 }
 
-struct OperationProgramCounterResult<N: Operand> {
-    let savedProgramCounter: UInt16
-    let state: InstructionState<N>
-    
-    func push(_ stack: Stack = .workingStack) -> Processor {
-        return state.pushShort(savedProgramCounter, stack).terminate()
-    }
-}
-
 struct OperationBinaryResult<N: Operand> {
-    let resultA: N
-    let resultB: N
-    let state: InstructionState<N>
-    
-    init(resultA: N, resultB: N, state: InstructionState<N>) {
-        self.resultA = resultA
-        self.resultB = resultB
-        self.state = state
-    }
+    let b: OperationUnaryResult<N>
     
     init(results: (a: N, b: N), state: InstructionState<N>) {
-        self.resultA = results.a
-        self.resultB = results.b
-        self.state = state
+        self.b = OperationUnaryResult(
+            result: results.b,
+            state: state.push(results.a)
+        )
     }
     
     func push() -> OperationUnaryResult<N> {
-        return OperationUnaryResult(
-            result: resultB,
-            state: state.push(resultA)
-        )
+        b
     }
 }
 
 struct OperationTernaryResult<N: Operand> {
-    // TODO recursive result structure
-    let resultA: N
-    let resultB: N
-    let resultC: N
-    let state: InstructionState<N>
-    
-    init(resultA: N, resultB: N, resultC: N, state: InstructionState<N>) {
-        self.resultA = resultA
-        self.resultB = resultB
-        self.resultC = resultC
-        self.state = state
-    }
-    
+    let b_and_c: OperationBinaryResult<N>
+        
     init(results: (a: N, b: N, c: N), state: InstructionState<N>) {
-        self.resultA = results.a
-        self.resultB = results.b
-        self.resultC = results.c
-        self.state = state
+        self.b_and_c = OperationBinaryResult(
+            results: (results.b, results.c),
+            state: state.push(results.a)
+        )
     }
     
     func push() -> OperationBinaryResult<N> {
-        return OperationBinaryResult(
-            resultA: resultB,
-            resultB: resultC,
-            state: state.push(resultA)
-        )
+        b_and_c
     }
 }
 
