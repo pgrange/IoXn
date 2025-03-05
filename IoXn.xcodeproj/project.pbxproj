@@ -33,9 +33,23 @@
 		504A49632D5FB7FC006CA1E0 /* IoXnUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = IoXnUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		5096A46E2D77D0D300992FEC /* Exceptions for "IoXn" folder in "IoXnTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Memory.swift,
+				Processor.swift,
+			);
+			target = 504A49582D5FB7FC006CA1E0 /* IoXnTests */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		504A494B2D5FB7FB006CA1E0 /* IoXn */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				5096A46E2D77D0D300992FEC /* Exceptions for "IoXn" folder in "IoXnTests" target */,
+			);
 			path = IoXn;
 			sourceTree = "<group>";
 		};
