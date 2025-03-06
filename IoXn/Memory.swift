@@ -1,9 +1,5 @@
-struct Memory : Equatable {
-    let data: [UInt16: UInt8]
-    
-    init(data: [UInt16 : UInt8]) {
-        self.data = data
-    }
+class Memory : Equatable {
+    var data: [UInt16: UInt8]
     
     init() {
         self.data = [UInt16:UInt8]()
@@ -20,7 +16,6 @@ struct Memory : Equatable {
     }
     
     func write<N: Operand>(_ address: UInt16, _ value: N) -> Memory {
-        var data = self.data
         if (N.sizeInBytes == 1) {
             data[address] = UInt8(value)
         } else {
@@ -28,7 +23,7 @@ struct Memory : Equatable {
             data[address] = high
             data[address &+ 1] = low
         }
-        return Memory(data: data)
+        return self
     }
     
     func write(_ address: UInt16, _ value: Int) -> Memory {
