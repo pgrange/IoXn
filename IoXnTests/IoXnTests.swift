@@ -8,6 +8,12 @@ import Nimble
  Implementation guide https://github.com/DeltaF1/uxn-impl-guide
  */
 
+extension Processor {
+    func stepNoMemory(_ rawOpcode: UInt8) -> Processor {
+        step(rawOpcode, withMemory: Memory()).processor
+    }
+}
+
 struct Op {
     static let inc: UInt8    = 0x01
     static let inc2: UInt8   = 0x21

@@ -8,20 +8,20 @@ struct IoXnMemoryTests {
             .write(2, 250)
             .write(3, 12)
         
-        expect(Processor().with(memory: initialMemory)
+        expect(Processor()
             .push(2)
-            .step(Op.ldz)
+            .step(Op.ldz, withMemory: initialMemory)
+            .processor
         ).to(equal(Processor().with(
-            workingStack: [250],
-            memory: initialMemory
+            workingStack: [250]
         )))
 
-        expect(Processor().with(memory: initialMemory)
+        expect(Processor()
             .push(2).push(2)
-            .step(Op.ldz2)
+            .step(Op.ldz2, withMemory: initialMemory)
+            .processor
         ).to(equal(Processor().with(
-            workingStack: [2, 250, 12],
-            memory: initialMemory
+            workingStack: [2, 250, 12]
         )))
 
     }
@@ -30,21 +30,20 @@ struct IoXnMemoryTests {
         expect(Processor()
             .push(2)
             .push(250)
-            .step(Op.stz)
-        ).to(equal(Processor().with(
-            memory: Memory().write(250, 2)
-        )))
+            .step(Op.stz, withMemory: Memory())
+            .memory
+        ).to(equal(Memory().write(250, 2)))
         
         expect(Processor()
             .push(2)
             .push(3)
             .push(250)
-            .step(Op.stz2)
-        ).to(equal(Processor().with(
-            memory: Memory()
+            .step(Op.stz2, withMemory: Memory())
+            .memory
+        ).to(equal(Memory()
                 .write(250, 2)
                 .write(251, 3)
-        )))
+        ))
 
     }
     
@@ -53,22 +52,22 @@ struct IoXnMemoryTests {
             .write(350, 250)
             .write(351, 12)
         
-        expect(Processor().with(programCounter: 340, memory: initialMemory)
+        expect(Processor().with(programCounter: 340)
             .push(10)
-            .step(Op.ldr)
+            .step(Op.ldr, withMemory: initialMemory)
+            .processor
         ).to(equal(Processor().with(
             programCounter: 340,
-            workingStack: [250],
-            memory: initialMemory
+            workingStack: [250]
         )))
 
-        expect(Processor().with(programCounter: 340, memory: initialMemory)
+        expect(Processor().with(programCounter: 340)
             .push(10)
-            .step(Op.ldr2)
+            .step(Op.ldr2, withMemory: initialMemory)
+            .processor
         ).to(equal(Processor().with(
             programCounter: 340,
-            workingStack: [250, 12],
-            memory: initialMemory
+            workingStack: [250, 12]
         )))
     }
     
@@ -76,23 +75,20 @@ struct IoXnMemoryTests {
         expect(Processor().with(programCounter: 340)
             .push(2)
             .push(10)
-            .step(Op.str)
-        ).to(equal(Processor().with(
-            programCounter: 340,
-            memory: Memory().write(350, 2)
-        )))
+            .step(Op.str, withMemory: Memory())
+            .memory
+        ).to(equal(Memory().write(350, 2)))
         
         expect(Processor().with(programCounter: 340)
             .push(2)
             .push(3)
             .push(10)
-            .step(Op.str2)
-        ).to(equal(Processor().with(
-            programCounter: 340,
-            memory: Memory()
+            .step(Op.str2, withMemory: Memory())
+            .memory
+        ).to(equal(Memory()
                 .write(350, 2)
                 .write(351, 3)
-        )))
+        ))
 
     }
     
@@ -100,13 +96,13 @@ struct IoXnMemoryTests {
         let initialMemory = Memory()
             .write(350, 250)
         
-        expect(Processor().with(memory: initialMemory)
+        expect(Processor().with()
             .push(0x01)
             .push(0x5e)
-            .step(Op.lda)
+            .step(Op.lda, withMemory: initialMemory)
+            .processor
         ).to(equal(Processor().with(
-            workingStack: [250],
-            memory: initialMemory
+            workingStack: [250]
         )))
     }
     
@@ -115,22 +111,20 @@ struct IoXnMemoryTests {
             .push(2)
             .push(0x01)
             .push(0x5e)
-            .step(Op.sta)
-        ).to(equal(Processor().with(
-            memory: Memory().write(350, 2)
-        )))
+            .step(Op.sta, withMemory: Memory())
+            .memory
+        ).to(equal(Memory().write(350, 2)))
         
         expect(Processor().with(programCounter: 340)
             .push(2)
             .push(3)
             .push(10)
-            .step(Op.str2)
-        ).to(equal(Processor().with(
-            programCounter: 340,
-            memory: Memory()
+            .step(Op.str2, withMemory: Memory())
+            .memory
+        ).to(equal(Memory()
                 .write(350, 2)
                 .write(351, 3)
-        )))
+        ))
     }
     
     @Test func opcodeLit() async throws {
@@ -138,20 +132,22 @@ struct IoXnMemoryTests {
             .write(12044, 12)
             .write(12045, 125)
         
-        expect(Processor().with(programCounter: 12043, memory: memory)
-            .step(Op.lit)
+        expect(Processor()
+            .with(programCounter: 12043)
+            .step(Op.lit, withMemory: memory)
+            .processor
         ).to(equal(Processor().with(
             programCounter: 12045,
-            workingStack: [12],
-            memory: memory
+            workingStack: [12]
         )))
         
-        expect(Processor().with(programCounter: 12043, memory: memory)
-            .step(Op.lit2)
+        expect(Processor()
+            .with(programCounter: 12043)
+            .step(Op.lit2, withMemory: memory)
+            .processor
         ).to(equal(Processor().with(
             programCounter: 12046,
-            workingStack: [12, 125],
-            memory: memory
+            workingStack: [12, 125]
         )))
     }
 }

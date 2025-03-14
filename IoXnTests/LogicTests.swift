@@ -7,14 +7,14 @@ struct IoXnLogicTests {
         expect(Processor()
             .push(1)
             .push(2)
-            .step(Op.equ)
+            .stepNoMemory(Op.equ)
         ).to(equal(Processor().with(
             workingStack: [0]
         )))
         expect(Processor()
             .push(1)
             .push(1)
-            .step(Op.equ)
+            .stepNoMemory(Op.equ)
         ).to(equal(Processor().with(
             workingStack: [1]
         )))
@@ -23,14 +23,14 @@ struct IoXnLogicTests {
         expect(Processor()
             .push(1)
             .push(2)
-            .step(Op.neq)
+            .stepNoMemory(Op.neq)
         ).to(equal(Processor().with(
             workingStack: [1]
         )))
         expect(Processor()
             .push(1)
             .push(1)
-            .step(Op.neq)
+            .stepNoMemory(Op.neq)
         ).to(equal(Processor().with(
             workingStack: [0]
         )))
@@ -39,21 +39,21 @@ struct IoXnLogicTests {
         expect(Processor()
             .push(1)
             .push(2)
-            .step(Op.gth)
+            .stepNoMemory(Op.gth)
         ).to(equal(Processor().with(
             workingStack: [0]
         )))
         expect(Processor()
             .push(2)
             .push(1)
-            .step(Op.gth)
+            .stepNoMemory(Op.gth)
         ).to(equal(Processor().with(
             workingStack: [1]
         )))
         expect(Processor()
             .push(1)
             .push(1)
-            .step(Op.gth)
+            .stepNoMemory(Op.gth)
         ).to(equal(Processor().with(
             workingStack: [0]
         )))
@@ -63,21 +63,21 @@ struct IoXnLogicTests {
         expect(Processor()
             .push(1)
             .push(2)
-            .step(Op.lth)
+            .stepNoMemory(Op.lth)
         ).to(equal(Processor().with(
             workingStack: [1]
         )))
         expect(Processor()
             .push(2)
             .push(1)
-            .step(Op.lth)
+            .stepNoMemory(Op.lth)
         ).to(equal(Processor().with(
             workingStack: [0]
         )))
         expect(Processor()
             .push(1)
             .push(1)
-            .step(Op.lth)
+            .stepNoMemory(Op.lth)
         ).to(equal(Processor().with(
             workingStack: [0]
         )))
@@ -87,7 +87,7 @@ struct IoXnLogicTests {
         expect(Processor()
             .push(0x0F)
             .push(0xF2)
-            .step(Op.and)
+            .stepNoMemory(Op.and)
         ).to(equal(Processor().with(
             workingStack: [0x02]
         )))
@@ -97,7 +97,7 @@ struct IoXnLogicTests {
         expect(Processor()
             .push(0x0F)
             .push(0xD2)
-            .step(Op.ora)
+            .stepNoMemory(Op.ora)
         ).to(equal(Processor().with(
             workingStack: [0xDF]
         )))
@@ -107,7 +107,7 @@ struct IoXnLogicTests {
         expect(Processor()
             .push(0x0F)
             .push(0xD2)
-            .step(Op.eor)
+            .stepNoMemory(Op.eor)
         ).to(equal(Processor().with(
             workingStack: [0xDD]
         )))
@@ -117,7 +117,7 @@ struct IoXnLogicTests {
         expect(Processor()
             .push(0x34)
             .push(0x10)
-            .step(Op.sft)
+            .stepNoMemory(Op.sft)
         ).to(equal(Processor().with(
             workingStack: [0x68]
         )))
