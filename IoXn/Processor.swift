@@ -64,9 +64,9 @@ struct Processor : Equatable {
     
     private init(
         memory: Memory = Memory(),
-        workingStack: [UInt8] = [],
-        returnStack: [UInt8] = [],
-        programCounter: UInt16 = 0x100
+        workingStack: [UInt8],
+        returnStack: [UInt8],
+        programCounter: UInt16
     ) {
         self.memory = memory
         self.workingStack = workingStack
@@ -75,7 +75,12 @@ struct Processor : Equatable {
     }
     
     init() {
-        self.init(memory: Memory())
+        self.init(
+            memory: Memory(),
+            workingStack: [],
+            returnStack: [],
+            programCounter: 0x100
+        )
     }
     
     func with(
