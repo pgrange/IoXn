@@ -37,6 +37,7 @@
 		5096A46E2D77D0D300992FEC /* Exceptions for "IoXn" folder in "IoXnTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Devices.swift,
 				Memory.swift,
 				Processor.swift,
 			);

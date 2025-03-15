@@ -58,6 +58,8 @@ struct Op {
     static let str: UInt8  = 0x13
     static let lda: UInt8  = 0x14
     static let sta: UInt8  = 0x15
+    static let dei: UInt8  = 0x16
+    static let deo: UInt8  = 0x17
 
     static let jci: UInt8  = 0x20
     static let jmi: UInt8  = 0x40
@@ -70,6 +72,8 @@ struct Op {
     static let ldr2: UInt8 = 0x32
     static let str2: UInt8 = 0x33
 
+    static let deo2: UInt8  = 0x37
+    
     static let jmp: UInt8 = 0x0c
     static let jcn: UInt8 = 0x0d
     static let jsr: UInt8 = 0x0e
