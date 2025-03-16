@@ -177,7 +177,7 @@ struct Processor : Equatable {
             return sta(instruction)
         
         case .dei:
-            return (self, memory)
+            return dei(instruction)
         case .deo:
             return deo(instruction)
         
@@ -345,6 +345,11 @@ private struct InstructionState<N: Operand> {
         return self
     }
     
+    func readFromDevice(_ address: UInt8) -> (N, InstructionState<N>) {
+        (devices.readFromDevice(address: address, as: N.self), self)
+    }
+    
+    
     
     func jump(to pc: UInt16) -> InstructionState<N> {
         self.with(processor: processor.with(programCounter: pc))
@@ -504,6 +509,11 @@ private struct UnaryOperationInProgress<N: Operand> {
     func readFromMemoryRelative(_ operation: (_ pc: UInt16, _ a: N) -> UInt16) -> OperationUnaryResult<N> {
         return OperationUnaryResult<N>(state.readFromMemory(operation(state.programCounter, a)))
     }
+    
+    func readFromDevice(_ operation: (N) -> UInt8) -> OperationUnaryResult<N> {
+        return OperationUnaryResult<N>(state.readFromDevice(operation(a)))
+    }
+    
 }
 
 private struct BinaryShortOperationInProgress<N: Operand> {
@@ -839,6 +849,10 @@ private func sta<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memor
 
 private func deo<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
     return instruction.popByte().pop().writeToDevice({ a, b in (UInt8(b), a)})
+}
+
+private func dei<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+    return instruction.popByte().readFromDevice({ a in UInt8(a) }).push()
 }
 
 private func jmp<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {

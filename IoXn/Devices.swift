@@ -22,12 +22,22 @@ struct Devices {
     func writeToDevice<N: Operand>(address: UInt8, value: N) {
         let device = DeviceIndex(rawValue: address & 0xf0)!
         let port   = address & 0x0f
-        devices[device]?.write(value, at: port)
+        devices[device]!.write(value, at: port)
+    }
+    
+    func readFromDevice<N: Operand>(address: UInt8, as: N.Type) -> N {
+        let device = DeviceIndex(rawValue: address & 0xf0)!
+        let port   = address & 0x0f
+        return devices[device]!.read(at: port, as: N.self)
     }
 }
 
 class Device {
     func write<N: Operand>(_ value: N, at: UInt8) {
+    }
+    
+    func read<N: Operand>(at: UInt8, as type: N.Type) -> N {
+        return N(0)
     }
 }
 
