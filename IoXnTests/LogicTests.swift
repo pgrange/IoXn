@@ -8,6 +8,7 @@ struct IoXnLogicTests {
             .push(1)
             .push(2)
             .stepNoMemory(Op.equ)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [0]
         )))
@@ -15,6 +16,7 @@ struct IoXnLogicTests {
             .push(1)
             .push(1)
             .stepNoMemory(Op.equ)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [1]
         )))
@@ -24,6 +26,7 @@ struct IoXnLogicTests {
             .push(1)
             .push(2)
             .stepNoMemory(Op.neq)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [1]
         )))
@@ -31,6 +34,7 @@ struct IoXnLogicTests {
             .push(1)
             .push(1)
             .stepNoMemory(Op.neq)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [0]
         )))
@@ -40,6 +44,7 @@ struct IoXnLogicTests {
             .push(1)
             .push(2)
             .stepNoMemory(Op.gth)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [0]
         )))
@@ -47,6 +52,7 @@ struct IoXnLogicTests {
             .push(2)
             .push(1)
             .stepNoMemory(Op.gth)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [1]
         )))
@@ -54,6 +60,7 @@ struct IoXnLogicTests {
             .push(1)
             .push(1)
             .stepNoMemory(Op.gth)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [0]
         )))
@@ -64,6 +71,7 @@ struct IoXnLogicTests {
             .push(1)
             .push(2)
             .stepNoMemory(Op.lth)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [1]
         )))
@@ -71,6 +79,7 @@ struct IoXnLogicTests {
             .push(2)
             .push(1)
             .stepNoMemory(Op.lth)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [0]
         )))
@@ -78,6 +87,7 @@ struct IoXnLogicTests {
             .push(1)
             .push(1)
             .stepNoMemory(Op.lth)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [0]
         )))
@@ -88,6 +98,7 @@ struct IoXnLogicTests {
             .push(0x0F)
             .push(0xF2)
             .stepNoMemory(Op.and)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [0x02]
         )))
@@ -98,6 +109,7 @@ struct IoXnLogicTests {
             .push(0x0F)
             .push(0xD2)
             .stepNoMemory(Op.ora)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [0xDF]
         )))
@@ -108,6 +120,7 @@ struct IoXnLogicTests {
             .push(0x0F)
             .push(0xD2)
             .stepNoMemory(Op.eor)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [0xDD]
         )))
@@ -118,6 +131,7 @@ struct IoXnLogicTests {
             .push(0x34)
             .push(0x10)
             .stepNoMemory(Op.sft)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [0x68]
         )))

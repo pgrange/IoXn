@@ -9,6 +9,7 @@ struct IoXnStackTests {
             .push(2)
             .push(3)
             .stepNoMemory(Op.pop)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [1, 2]
         )))
@@ -18,6 +19,7 @@ struct IoXnStackTests {
             .push(2)
             .push(3)
             .stepNoMemory(Op.popk)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [1, 2, 3]
         )))
@@ -27,6 +29,7 @@ struct IoXnStackTests {
             .push(2)
             .push(3)
             .stepNoMemory(Op.pop2)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [1]
         )))
@@ -36,6 +39,7 @@ struct IoXnStackTests {
             .push(2, .returnStack)
             .push(3, .returnStack)
             .stepNoMemory(Op.pop2kr)
+            .processor
         ).to(equal(Processor().with(
             returnStack: [1, 2, 3]
         )))
@@ -48,6 +52,7 @@ struct IoXnStackTests {
             .push(2)
             .push(3)
             .stepNoMemory(Op.nip)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [1, 3]
         )))
@@ -59,6 +64,7 @@ struct IoXnStackTests {
             .push(2)
             .push(3)
             .stepNoMemory(Op.swp)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [1, 3, 2]
         )))
@@ -70,6 +76,7 @@ struct IoXnStackTests {
             .push(2)
             .push(3)
             .stepNoMemory(Op.rot)
+            .processor
         
         expect(result).to(equal(Processor().with(
             workingStack: [2, 3, 1]
@@ -81,6 +88,7 @@ struct IoXnStackTests {
             .push(1)
             .push(2)
             .stepNoMemory(Op.dup)
+            .processor
         
         expect(result).to(equal(Processor().with(
             workingStack: [1, 2, 2]
@@ -92,6 +100,7 @@ struct IoXnStackTests {
             .push(1)
             .push(2)
             .stepNoMemory(Op.ovr)
+            .processor
         
         expect(processor).to(equal(Processor().with(
             workingStack: [1, 2, 1]
@@ -102,6 +111,7 @@ struct IoXnStackTests {
         expect(Processor()
             .push(2)
             .stepNoMemory(Op.sth)
+            .processor
         ).to(equal(Processor().with(
             returnStack: [2]
         )))
@@ -109,6 +119,7 @@ struct IoXnStackTests {
         expect(Processor()
             .push(2, .returnStack)
             .stepNoMemory(Op.sthr)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [2]
         )))

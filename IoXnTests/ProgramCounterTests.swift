@@ -4,76 +4,70 @@ import Nimble
 
 struct IoXnProgramCounterTests {
     @Test func opcodeJmp() async throws {
-        expect(Processor().with(programCounter: 12043)
+        expect(Processor()
             .push(2)
-            .stepNoMemory(Op.jmp)
-        ).to(equal(Processor().with(
-            programCounter: 12045
-        )))
+            .stepNoMemory(Op.jmp, programCounter: 12043)
+            .updateProgramCounter(12043)
+        ).to(equal(12045))
         
-        expect(Processor().with(programCounter: 12043)
+        expect(Processor()
             .push(0 &- 2)
-            .stepNoMemory(Op.jmp)
-        ).to(equal(Processor().with(
-            programCounter: 12041
-        )))
+            .stepNoMemory(Op.jmp, programCounter: 12043)
+            .updateProgramCounter(12043)
+        ).to(equal(12041))
         
-        expect(Processor().with(programCounter: 12043)
+        expect(Processor()
             .push(oneShortAsByteArray(12050))
-            .stepNoMemory(Op.jmp2)
-        ).to(equal(Processor().with(
-            programCounter: 12050
-        )))
+            .stepNoMemory(Op.jmp2, programCounter: 12043)
+            .updateProgramCounter(12043)
+        ).to(equal(12050))
     }
     @Test func opcodeJcn() async throws {
-        expect(Processor().with(programCounter: 12043)
+        expect(Processor()
             .push(5)
             .push(2)
-            .stepNoMemory(Op.jcn)
-        ).to(equal(Processor().with(
-            programCounter: 12045
-        )))
+            .stepNoMemory(Op.jcn, programCounter: 12043)
+            .updateProgramCounter(12043)
+        ).to(equal(12045))
         
-        expect(Processor().with(programCounter: 12043)
+        expect(Processor()
             .push(5)
             .push(0 &- 2)
-            .stepNoMemory(Op.jcn)
-        ).to(equal(Processor().with(
-            programCounter: 12041
-        )))
+            .stepNoMemory(Op.jcn, programCounter: 12043)
+            .updateProgramCounter(12043)
+        ).to(equal(12041))
         
-        expect(Processor().with(programCounter: 12043)
+        expect(Processor()
             .push(0)
             .push(2)
-            .stepNoMemory(Op.jcn)
-        ).to(equal(Processor().with(
-            programCounter: 12043)))
+            .stepNoMemory(Op.jcn, programCounter: 12043)
+            .updateProgramCounter(12043)
+        ).to(equal(12043))
 
-        expect(Processor().with(programCounter: 12043)
+        expect(Processor()
             .push(5)
             .push(oneShortAsByteArray(12050))
-            .stepNoMemory(Op.jcn2)
-        ).to(equal(Processor().with(
-            programCounter: 12050
-        )))
+            .stepNoMemory(Op.jcn2, programCounter: 12043)
+            .updateProgramCounter(12043)
+        ).to(equal(12050))
     }
     
     @Test func opcodeJsr() async throws {
-        expect(Processor().with(programCounter: 12043)
+        let (processor, _, updateProgramCounter) = Processor()
             .push(5)
-            .stepNoMemory(Op.jsr)
-        ).to(equal(Processor().with(
-            programCounter: 12048,
-            returnStack: oneShortAsByteArray(12044)
-        )))
+            .stepNoMemory(Op.jsr, programCounter: 12043)
         
-        expect(Processor().with(programCounter: 12043)
+        expect(updateProgramCounter(12043)).to(equal(12048))
+        expect(processor).to(equal(Processor().with(returnStack: oneShortAsByteArray(12044))))
+    }
+    
+    @Test func opcodeJsr2() async throws {
+        let (processor, _, updateProgramCounter) = Processor()
             .push(oneShortAsByteArray(12055))
-            .stepNoMemory(Op.jsr2)
-        ).to(equal(Processor().with(
-            programCounter: 12055,
-            returnStack: oneShortAsByteArray(12044)
-        )))
+            .stepNoMemory(Op.jsr2, programCounter: 12043)
+        
+        expect(updateProgramCounter(12043)).to(equal(12055))
+        expect(processor).to(equal(Processor().with(returnStack: oneShortAsByteArray(12044))))
     }
     
     @Test func opcodeJci() async throws {
@@ -81,21 +75,17 @@ struct IoXnProgramCounterTests {
             .write(12044, 0)
             .write(12045, 125)
         
-        expect(Processor().with(programCounter: 12043)
+        expect(Processor()
             .push(0)
-            .step(Op.jci, withMemory: memory)
-            .processor
-        ).to(equal(Processor().with(
-            programCounter: 12046
-        )))
+            .step(Op.jci, withMemory: memory, programCounter: 12043)
+            .updateProgramCounter(12043)
+        ).to(equal(12046))
         
-        expect(Processor().with(programCounter: 12043)
+        expect(Processor()
             .push(1)
-            .step(Op.jci, withMemory: memory)
-            .processor
-        ).to(equal(Processor().with(
-            programCounter: 12168
-        )))
+            .step(Op.jci, withMemory: memory, programCounter: 12043)
+            .updateProgramCounter(12043)
+        ).to(equal(12168))
     }
     
     @Test func opcodeJmi() async throws {
@@ -103,12 +93,10 @@ struct IoXnProgramCounterTests {
             .write(12044, 0)
             .write(12045, 125)
         
-        expect(Processor().with(programCounter: 12043)
-            .step(Op.jmi, withMemory: memory)
-            .processor
-        ).to(equal(Processor().with(
-            programCounter: 12168
-        )))
+        expect(Processor()
+            .step(Op.jmi, withMemory: memory, programCounter: 12043)
+            .updateProgramCounter(12043)
+        ).to(equal(12168))
     }
     
     @Test func opcodeJsi() async throws {
@@ -116,12 +104,11 @@ struct IoXnProgramCounterTests {
             .write(12044, 0)
             .write(12045, 125)
         
-        expect(Processor().with(programCounter: 12043)
-            .step(Op.jsi, withMemory: memory)
-            .processor
-        ).to(equal(Processor().with(
-            programCounter: 12168,
+        let (processor, _, updateProgramCounter) = Processor()
+            .step(Op.jsi, withMemory: memory, programCounter: 12043)
+        expect(processor).to(equal(Processor().with(
             returnStack: [0x2F, 0x0E] //12046
         )))
+        expect(updateProgramCounter(12043)).to(equal(12168))
     }
 }

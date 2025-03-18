@@ -9,8 +9,9 @@ import Nimble
  */
 
 extension Processor {
-    func stepNoMemory(_ rawOpcode: UInt8) -> Processor {
-        step(rawOpcode, withMemory: Memory()).processor
+    func stepNoMemory(_ rawOpcode: UInt8, programCounter: UInt16 = 0x100)
+    -> (processor: Processor, memory: Memory, updateProgramCounter: UpdateProgramCounter) {
+        step(rawOpcode, withMemory: Memory(), programCounter: programCounter)
     }
 }
 

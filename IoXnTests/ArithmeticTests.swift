@@ -7,6 +7,7 @@ struct IoXnArithmeticTests {
         expect(Processor()
             .push(6)
             .stepNoMemory(Op.inc)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [7]
         )))
@@ -14,6 +15,7 @@ struct IoXnArithmeticTests {
         expect(Processor()
             .push(6)
             .stepNoMemory(Op.inck)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [6, 7]
         )))
@@ -22,6 +24,7 @@ struct IoXnArithmeticTests {
             .push(6)
             .push(255)
             .stepNoMemory(Op.inc2)
+            .processor
         ).to(equal(Processor().with(
             workingStack: oneShortAsByteArray(1792)
         )))
@@ -30,6 +33,7 @@ struct IoXnArithmeticTests {
             .push(6)
             .push(255)
             .stepNoMemory(Op.inc2k)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [6, 255] + oneShortAsByteArray(1792)
         )))
@@ -40,6 +44,7 @@ struct IoXnArithmeticTests {
             .push(1)
             .push(2)
             .stepNoMemory(Op.add)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [3]
         )))
@@ -48,6 +53,7 @@ struct IoXnArithmeticTests {
             .push(255)
             .push(1)
             .stepNoMemory(Op.add)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [0]
         )))
@@ -58,6 +64,7 @@ struct IoXnArithmeticTests {
             .push(2)
             .push(1)
             .stepNoMemory(Op.sub)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [1]
         )))
@@ -66,6 +73,7 @@ struct IoXnArithmeticTests {
             .push(1)
             .push(2)
             .stepNoMemory(Op.sub)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [255]
         )))
@@ -76,6 +84,7 @@ struct IoXnArithmeticTests {
             .push(2)
             .push(2)
             .stepNoMemory(Op.mul)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [4]
         )))
@@ -84,6 +93,7 @@ struct IoXnArithmeticTests {
             .push(130)
             .push(2)
             .stepNoMemory(Op.mul)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [4]
         )))
@@ -94,6 +104,7 @@ struct IoXnArithmeticTests {
             .push(6)
             .push(2)
             .stepNoMemory(Op.div)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [3]
         )))
@@ -102,6 +113,7 @@ struct IoXnArithmeticTests {
             .push(255)
             .push(2)
             .stepNoMemory(Op.div)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [127]
         )))
@@ -110,6 +122,7 @@ struct IoXnArithmeticTests {
             .push(12)
             .push(0)
             .stepNoMemory(Op.div)
+            .processor
         ).to(equal(Processor().with(
             workingStack: [0]
         )))

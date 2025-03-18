@@ -61,37 +61,31 @@ enum Stack {
 struct Processor : Equatable {
     let workingStack: [UInt8]
     let returnStack: [UInt8]
-    let programCounter: UInt16
     
     private init(
         memory: Memory = Memory(),
         workingStack: [UInt8],
-        returnStack: [UInt8],
-        programCounter: UInt16
+        returnStack: [UInt8]
     ) {
         self.workingStack = workingStack
         self.returnStack = returnStack
-        self.programCounter = programCounter
     }
     
     init() {
         self.init(
             memory: Memory(),
             workingStack: [],
-            returnStack: [],
-            programCounter: 0x100
+            returnStack: []
         )
     }
     
     func with(
-        programCounter: UInt16? = nil,
         workingStack: [UInt8]? = nil,
         returnStack: [UInt8]? = nil
     ) -> Processor {
         return Processor(
             workingStack: workingStack ?? self.workingStack,
-            returnStack: returnStack ?? self.returnStack,
-            programCounter: programCounter ?? self.programCounter
+            returnStack: returnStack ?? self.returnStack
         )
     }
     
@@ -125,8 +119,8 @@ struct Processor : Equatable {
         }
     }
     
-    private func step_<N: Operand>(memory: Memory, devices: Devices, for: N.Type, reverseStack: Bool, keepStack: Bool, opcode: Opcode) -> (Processor, Memory) {
-        let instruction = Instruction<N>(self, memory, devices, reverseStack: reverseStack, keepStack: keepStack)
+    private func step_<N: Operand>(programCounter: UInt16, memory: Memory, devices: Devices, for: N.Type, reverseStack: Bool, keepStack: Bool, opcode: Opcode) -> (Processor, Memory, UpdateProgramCounter) {
+        let instruction = Instruction<N>(self, programCounter, memory, devices, reverseStack: reverseStack, keepStack: keepStack)
         switch opcode {
         case .inc:
             return inc(instruction)
@@ -207,21 +201,25 @@ struct Processor : Equatable {
         }
     }
     
-    func step(_ rawOpcode: UInt8, withMemory memory: Memory, withDevices devices: Devices = Devices())
-    -> (processor: Processor, memory: Memory) {
+    func step(_ rawOpcode: UInt8,
+              withMemory memory: Memory,
+              withDevices devices: Devices = Devices(),
+              programCounter: UInt16 = 0x100
+    ) -> (processor: Processor, memory: Memory, updateProgramCounter: UpdateProgramCounter) {
         let keep = rawOpcode    & 0x80 == 0x00 ? false : true
         let reverse = rawOpcode & 0x40 == 0x00 ? false : true
         let size : any Operand.Type = rawOpcode & 0x20 == 0x00 ? UInt8.self : UInt16.self
         
         switch rawOpcode {
         case Opcode.jci.rawValue:
-            return jci(Instruction<UInt8>(self, memory, devices))
+            return jci(Instruction<UInt8>(self, programCounter, memory, devices))
         case Opcode.jmi.rawValue:
-            return jmi(Instruction<UInt8>(self, memory, devices))
+            return jmi(Instruction<UInt8>(self, programCounter, memory, devices))
         case Opcode.jsi.rawValue:
-            return jsi(Instruction<UInt16>(self, memory, devices))
+            return jsi(Instruction<UInt16>(self, programCounter, memory, devices))
         case Opcode.lit.rawValue, Opcode.lit.rawValue | 0x20:
             return step_(
+                programCounter: programCounter,
                 memory: memory,
                 devices: devices,
                 for: size,
@@ -231,6 +229,7 @@ struct Processor : Equatable {
             )
         default:
             return step_(
+                programCounter: programCounter,
                 memory: memory,
                 devices: devices,
                 for: size,
@@ -244,20 +243,47 @@ struct Processor : Equatable {
 
 private struct InstructionState<N: Operand> {
     private let processor: Processor
+    let programCounter: UInt16 //TODO make it private
     private let memory: Memory
     private let devices: Devices
     private let reverseStack: Bool
     private let keepStack: Bool
     private let popped: [UInt8]
+    private let updateProgramCounter: UpdateProgramCounter
     
-    var programCounter: UInt16 { processor.programCounter }
-    
-    init(processor: Processor, memory: Memory, devices: Devices, reverseStack: Bool = false, keepStack: Bool = false) {
-        self.init(processor: processor, memory: memory, devices: devices, reverseStack: reverseStack, keepStack: keepStack, popped: [])
+    init(
+        processor: Processor,
+        programCounter: UInt16,
+        memory: Memory,
+        devices: Devices,
+        reverseStack: Bool = false,
+        keepStack: Bool = false
+    ){
+        self.init(
+            processor: processor,
+            programCounter: programCounter,
+            updateProgramCounter: { pc in pc &+ 1 },
+            memory: memory,
+            devices: devices,
+            reverseStack: reverseStack,
+            keepStack: keepStack,
+            popped: []
+        )
     }
     
-    private init(processor: Processor, memory: Memory, devices: Devices, reverseStack: Bool, keepStack: Bool, popped: [UInt8]) {
+    private init(
+        processor: Processor,
+        programCounter: UInt16,
+        updateProgramCounter: @escaping UpdateProgramCounter,
+        memory: Memory,
+        devices: Devices,
+        reverseStack: Bool,
+        keepStack: Bool,
+        popped: [UInt8]
+    ) {
         self.processor = processor
+        self.programCounter = programCounter
+        self.updateProgramCounter = updateProgramCounter
         self.memory = memory
         self.devices = devices
         self.reverseStack = reverseStack
@@ -267,11 +293,14 @@ private struct InstructionState<N: Operand> {
     
     private func with(
         processor: Processor? = nil,
+        updateProgramCounter: UpdateProgramCounter? = nil,
         memory: Memory? = nil,
         popped: [UInt8]? = nil
     ) -> InstructionState {
         InstructionState(
             processor: processor ?? self.processor,
+            programCounter: self.programCounter,
+            updateProgramCounter: updateProgramCounter ?? self.updateProgramCounter,
             memory: memory ?? self.memory,
             devices: devices,
             reverseStack: reverseStack,
@@ -349,14 +378,12 @@ private struct InstructionState<N: Operand> {
         (devices.readFromDevice(address: address, as: N.self), self)
     }
     
-    
-    
     func jump(to pc: UInt16) -> InstructionState<N> {
-        self.with(processor: processor.with(programCounter: pc))
+        self.with(updateProgramCounter: { _ in pc } )
     }
     
-    func terminate() -> (Processor, Memory) {
-        (restoreStack().processor, memory)
+    func terminate() -> (Processor, Memory, UpdateProgramCounter) {
+        (restoreStack().processor, memory, updateProgramCounter)
     }
     
     private func restoreStack() -> InstructionState<N> {
@@ -374,9 +401,10 @@ private struct InstructionState<N: Operand> {
 private struct Instruction<N: Operand> {
     let state: InstructionState<N>
     
-    init(_ processor: Processor, _ memory: Memory, _ devices: Devices, reverseStack: Bool = false, keepStack: Bool = false) {
+    init(_ processor: Processor, _ programCounter: UInt16, _ memory: Memory, _ devices: Devices, reverseStack: Bool = false, keepStack: Bool = false) {
         self.state = InstructionState(
             processor: processor,
+            programCounter: programCounter,
             memory: memory,
             devices: devices,
             reverseStack: reverseStack,
@@ -426,7 +454,7 @@ private struct UnaryShortOperationInProgress<N: Operand> {
         BinaryShortOperationInProgress(a, state.pop(stack))
     }
     
-    func applyProgramCounter(_ operation: (_ pc: UInt16, _ a: UInt16) -> (UInt16)) -> (Processor, Memory) {
+    func applyProgramCounter(_ operation: (_ pc: UInt16, _ a: UInt16) -> (UInt16)) -> (Processor, Memory, UpdateProgramCounter) {
         state.jump(to: operation(state.programCounter, a)).terminate()
     }
     
@@ -464,11 +492,11 @@ private struct UnaryOperationInProgress<N: Operand> {
         BinaryOperationInProgress(a, state.popByte())
     }
     
-    func noop() -> (Processor, Memory) {
+    func noop() -> (Processor, Memory, UpdateProgramCounter) {
         return state.terminate()
     }
     
-    func applyProgramCounter(_ operation: (_ pc: UInt16, _ a: N) -> UInt16) -> (Processor, Memory) {
+    func applyProgramCounter(_ operation: (_ pc: UInt16, _ a: N) -> UInt16) -> (Processor, Memory, UpdateProgramCounter) {
         state.jump(to: operation(state.programCounter, a)).terminate()
     }
     
@@ -527,11 +555,11 @@ private struct BinaryShortOperationInProgress<N: Operand> {
         self.state = params.state
     }
     
-    func writeToMemory(_ operation: (_ a: N, _ b: UInt16) -> (address: UInt16, value: N)) -> (Processor, Memory) {
+    func writeToMemory(_ operation: (_ a: N, _ b: UInt16) -> (address: UInt16, value: N)) -> (Processor, Memory, UpdateProgramCounter) {
         return state.writeToMemory(operation(a, b)).terminate()
     }
     
-    func applyProgramCounter(_ operation: (UInt16, N, UInt16) -> UInt16) -> (Processor, Memory) {
+    func applyProgramCounter(_ operation: (UInt16, N, UInt16) -> UInt16) -> (Processor, Memory, UpdateProgramCounter) {
         state.jump(to: operation(state.programCounter, a, b)).terminate()
     }
 }
@@ -551,19 +579,20 @@ private struct BinaryOperationInProgress<N: Operand> {
         return TernaryOperationInProgress(a, b, state.pop())
     }
     
-    func writeToMemory(_ operation: (N, N) -> (UInt16, N)) -> (Processor, Memory) {
+    func writeToMemory(_ operation: (N, N) -> (UInt16, N)) -> (Processor, Memory, UpdateProgramCounter) {
         return state.writeToMemory(operation(a, b)).terminate()
     }
     
-    func writeToMemoryRelative(_ operation: (UInt16, N, N) -> (address: UInt16, value: N)) -> (Processor, Memory) {
+    func writeToMemoryRelative(_ operation: (UInt16, N, N) -> (address: UInt16, value: N))
+    -> (Processor, Memory, UpdateProgramCounter) {
         return state.writeToMemory(operation(state.programCounter, a, b)).terminate()
     }
     
-    func writeToDevice(_ operation: (N, N) -> (UInt8, N)) -> (Processor, Memory) {
+    func writeToDevice(_ operation: (N, N) -> (UInt8, N)) -> (Processor, Memory, UpdateProgramCounter) {
         return state.writeToDevice(operation(a, b)).terminate()
     }
     
-    func applyProgramCounter(_ operation: (UInt16, N, N) -> UInt16) -> (Processor, Memory) {
+    func applyProgramCounter(_ operation: (UInt16, N, N) -> UInt16) -> (Processor, Memory, UpdateProgramCounter) {
         return state.jump(to: operation(state.programCounter, a, b)).terminate()
     }
 
@@ -614,7 +643,7 @@ private struct OperationProgramCounterResult<N: Operand> {
     let savedProgramCounter: UInt16
     let state: InstructionState<N>
     
-    func push(_ stack: Stack = .workingStack) -> (Processor, Memory) {
+    func push(_ stack: Stack = .workingStack) -> (Processor, Memory, UpdateProgramCounter) {
         return state.pushShort(savedProgramCounter, stack).terminate()
     }
 }
@@ -633,7 +662,7 @@ private struct OperationUnaryResult<N: Operand> {
         self.state = params.state
     }
     
-    func push(_ stack: Stack = .workingStack) -> (Processor, Memory) {
+    func push(_ stack: Stack = .workingStack) -> (Processor, Memory, UpdateProgramCounter) {
         return state.push(result, stack).terminate()
     }
 }
@@ -702,6 +731,8 @@ extension UInt16: Operand {
     }
 }
 
+typealias UpdateProgramCounter = (UInt16) -> UInt16?
+
 func oneShortAsByteArray(_ value: UInt16) -> [UInt8] {
     let highByte: UInt8 = UInt8((value & 0xFF00) >> 8)
     let lowByte: UInt8 = UInt8(value & 0x00FF)
@@ -718,52 +749,52 @@ func twoBytesAsOneShort(_ highByte: UInt8, _ lowByte: UInt8) -> UInt16 {
     return UInt16(highByte) << 8 | UInt16(lowByte)
 }
 
-private func inc<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func inc<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     let one: N = .fromByteArray([UInt8](repeating: 0, count: N.sizeInBytes - 1) + [1])
     return instruction.pop().apply11({ a in a &+ one}).push()
 }
 
-private func popi<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func popi<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction.pop().noop()
 }
 
-private func nip<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func nip<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction.pop().pop().apply21({ a, b in b }).push()
 }
 
-private func swp<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func swp<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction.pop().pop().apply22({ a, b in (b, a)}).push().push()
 }
 
-private func add<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func add<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction.pop().pop().apply21(&+).push()
 }
 
-private func sub<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func sub<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction.pop().pop().apply21(&-).push()
 }
 
-private func mul<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func mul<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction.pop().pop().apply21(&*).push()
 }
 
-private func div<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func div<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction.pop().pop().apply21({ a, b in b == 0 ? 0 : a / b}).push()
 }
 
-private func and<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func and<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction.pop().pop().apply21(&).push()
 }
 
-private func ora<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func ora<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction.pop().pop().apply21(|).push()
 }
 
-private func eor<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func eor<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction.pop().pop().apply21(^).push()
 }
 
-private func sft<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func sft<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction.pop().pop().apply21({
         a, b in
         let shiftRight = b & 0x0F
@@ -772,90 +803,90 @@ private func sft<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memor
     }).push()
 }
 
-private func rot<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func rot<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction
         .pop().pop().pop()
         .apply33({ a, b, c in (b, c, a) })
         .push().push().push()
 }
 
-private func dup<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func dup<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction
         .pop().apply12( { a in (a, a) } ).push().push()
 }
 
-private func ovr<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func ovr<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction
         .pop().pop().apply23( { a, b in (a, b, a) } ).push().push().push()
 }
 
-private func equ<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func equ<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction
         .pop().pop().apply21( { a, b in a == b ? 1 : 0 } ).push()
 }
 
-private func neq<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func neq<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction
         .pop().pop().apply21( { a, b in a == b ? 0 : 1 } ).push()
 }
 
-private func gth<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func gth<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction
         .pop().pop().apply21( { a, b in a > b ? 1 : 0 } ).push()
 }
 
-private func lth<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func lth<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction
         .pop().pop().apply21( { a, b in a < b ? 1 : 0 } ).push()
 }
 
-private func sth<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func sth<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction
         .pop().apply11( { a in a } ).push(.returnStack)
 }
 
-private func ldz<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func ldz<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction
         .popByte().readFromMemory( { a in UInt16(a) } ).push()
 }
 
-private func stz<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func stz<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction
         .popByte().pop()
         .writeToMemory({ a, b in (UInt16(b), a) })
 }
 
-private func ldr<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func ldr<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction
         .popByte().readFromMemoryRelative( { pc, a in pc &+ UInt16(a) } ).push()
 }
 
-private func str<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func str<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction
         .popByte().pop()
         .writeToMemoryRelative({ pc, a, b in (address: pc + UInt16(b), value: a) })
 }
 
-private func lda<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func lda<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction
         .popShort().readFromMemory().push()
 }
 
-private func sta<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func sta<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction
         .popShort().pop()
         .writeToMemory({ a, b in (address: b, value: a) })
 }
 
-private func deo<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func deo<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction.popByte().pop().writeToDevice({ a, b in (UInt8(b), a)})
 }
 
-private func dei<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func dei<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction.popByte().readFromDevice({ a in UInt8(a) }).push()
 }
 
-private func jmp<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func jmp<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction
         .pop()
         .applyProgramCounter( {
@@ -863,7 +894,7 @@ private func jmp<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memor
         } )
 }
 
-private func jcn<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func jcn<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction
         .pop().popByte()
         .applyProgramCounter( { pc, a, b in
@@ -875,14 +906,14 @@ private func jcn<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memor
         })
 }
 
-private func jsr<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func jsr<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction
         .pop()
         .applyProgramCounterSave({ pc, a in (N.sizeInBytes == 1 ? jump(pc: pc, offset: UInt8(a)) : UInt16(a), pc &+ 1) })
         .push(.returnStack)
 }
 
-private func jci(_ instruction: Instruction<UInt8>) -> (Processor, Memory) {
+private func jci(_ instruction: Instruction<UInt8>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction
         .readNextShortFromMemory()
         .pop()
@@ -893,7 +924,7 @@ private func jci(_ instruction: Instruction<UInt8>) -> (Processor, Memory) {
         })
 }
 
-private func jmi(_ instruction: Instruction<UInt8>) -> (Processor, Memory) {
+private func jmi(_ instruction: Instruction<UInt8>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction
         .readNextShortFromMemory()
         .applyProgramCounter({
@@ -903,7 +934,7 @@ private func jmi(_ instruction: Instruction<UInt8>) -> (Processor, Memory) {
         })
 }
 
-private func jsi(_ instruction: Instruction<UInt16>) -> (Processor, Memory) {
+private func jsi(_ instruction: Instruction<UInt16>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction
         .readNextShortFromMemory()
         .applyProgramCounterSave({
@@ -913,7 +944,7 @@ private func jsi(_ instruction: Instruction<UInt16>) -> (Processor, Memory) {
         .push(.returnStack)
 }
 
-private func lit<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory) {
+private func lit<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction
         .readNextFromMemory()
         .applyProgramCounter1({ pc, a in (pc &+ 1 &+ UInt16(N.sizeInBytes), a) })
