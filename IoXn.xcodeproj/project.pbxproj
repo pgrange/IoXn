@@ -38,6 +38,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Devices.swift,
+				IoXn.swift,
 				Memory.swift,
 				Processor.swift,
 			);
@@ -56,6 +57,9 @@
 		};
 		504A495C2D5FB7FC006CA1E0 /* IoXnTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFolders = (
+				integration_tests,
+			);
 			path = IoXnTests;
 			sourceTree = "<group>";
 		};

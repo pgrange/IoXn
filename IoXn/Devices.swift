@@ -32,15 +32,6 @@ struct Devices {
     }
 }
 
-class Device {
-    func write<N: Operand>(_ value: N, at: UInt8) {
-    }
-    
-    func read<N: Operand>(at: UInt8, as type: N.Type) -> N {
-        return N(0)
-    }
-}
-
 enum DeviceIndex: UInt8, CaseIterable {
     case system     = 0x00
     case console    = 0x10
@@ -58,4 +49,28 @@ enum DeviceIndex: UInt8, CaseIterable {
     case reserved0  = 0xd0
     case reserved1  = 0xe0
     case fifteen    = 0xf0
+}
+
+class Device {
+    func write<N: Operand>(_ value: N, at: UInt8) {
+    }
+    
+    func read<N: Operand>(at: UInt8, as type: N.Type) -> N {
+        return N(0)
+    }
+}
+
+class Console<Out: TextOutputStream> : Device{
+    var out: Out
+    
+    init(out: Out) {
+        self.out = out
+    }
+    
+    override func write<N>(_ value: N, at: UInt8) where N : Operand {
+        if at == 0x08 {
+            let asciiString = String(decoding: value.toByteArray(), as: UTF8.self)
+            print(asciiString, terminator: "", to: &out)
+        }
+    }
 }

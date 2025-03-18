@@ -1,12 +1,19 @@
+import Foundation
 struct Memory : Equatable {
     let data: [UInt16: UInt8]
     
-    init(data: [UInt16 : UInt8]) {
+    private init(data: [UInt16 : UInt8]) {
         self.data = data
     }
     
-    init() {
-        self.data = [UInt16:UInt8]()
+    init(initializedWith rom: Data = Data()) {
+        var data = [UInt16: UInt8]()
+        
+        for (index, byte) in rom.enumerated() {
+            data[UInt16(index + 0x100)] = byte
+        }
+        
+        self.data = data
     }
     
     func read<N: Operand>(_ address: UInt16, as type: N.Type) -> N {
@@ -34,6 +41,16 @@ struct Memory : Equatable {
     func write(_ address: UInt16, _ value: Int) -> Memory {
         //sugar method for when calling with literal
         return self.write(address, UInt8(value))
+    }
+    
+    func write(_ address: UInt16, _ values: Data) -> Memory {
+        var data = self.data
+        
+        for (index, byte) in values.enumerated() {
+            data[UInt16(index) + address] = byte
+        }
+        
+        return Memory(data: data)
     }
     
     static func == (lhs: Memory, rhs: Memory) -> Bool {

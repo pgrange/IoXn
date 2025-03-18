@@ -54,10 +54,10 @@ struct IoXnMemoryTests {
         
         let (processor, _, updateProgramCounter) = Processor()
             .push(10)
-            .step(Op.ldr, withMemory: initialMemory, programCounter: 340)
+            .step(Op.ldr, withMemory: initialMemory, programCounter: 339)
         
         expect(processor).to(equal(Processor().with(workingStack: [250])))
-        expect(updateProgramCounter(340)).to(equal(341))
+        expect(updateProgramCounter(339)).to(equal(340))
     }
     
     @Test func opcodeLdr2() async throws {
@@ -67,10 +67,10 @@ struct IoXnMemoryTests {
         
         let (processor, _, updateProgramCounter) = Processor()
             .push(10)
-            .step(Op.ldr2, withMemory: initialMemory, programCounter: 340)
+            .step(Op.ldr2, withMemory: initialMemory, programCounter: 339)
         
         expect(processor).to(equal(Processor().with(workingStack: [250, 12])))
-        expect(updateProgramCounter(340)).to(equal(341))
+        expect(updateProgramCounter(339)).to(equal(340))
     }
     
     @Test func opcodeStr() async throws {
@@ -79,7 +79,7 @@ struct IoXnMemoryTests {
             .push(10)
             .step(Op.str, withMemory: Memory(), programCounter: 340)
             .memory
-        ).to(equal(Memory().write(350, 2)))
+        ).to(equal(Memory().write(351, 2)))
         
         expect(Processor()
             .push(2)
@@ -88,8 +88,8 @@ struct IoXnMemoryTests {
             .step(Op.str2, withMemory: Memory(), programCounter: 340)
             .memory
         ).to(equal(Memory()
-                .write(350, 2)
-                .write(351, 3)
+                .write(351, 2)
+                .write(352, 3)
         ))
 
     }
@@ -124,8 +124,8 @@ struct IoXnMemoryTests {
             .step(Op.str2, withMemory: Memory(), programCounter: 340)
             .memory
         ).to(equal(Memory()
-                .write(350, 2)
-                .write(351, 3)
+                .write(351, 2)
+                .write(352, 3)
         ))
     }
     
