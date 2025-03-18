@@ -16,6 +16,8 @@ extension Processor {
 }
 
 struct Op {
+    static let brk: UInt8    = 0x00
+    
     static let inc: UInt8    = 0x01
     static let inc2: UInt8   = 0x21
     static let incr: UInt8   = 0x41
@@ -36,19 +38,36 @@ struct Op {
     static let dup: UInt8 = 0x06
     static let ovr: UInt8 = 0x07
     static let equ: UInt8 = 0x08
+    static let equ2: UInt8 = 0x28
+    static let equk: UInt8 = 0x88
+    static let equ2k: UInt8 = 0xa8
     static let neq: UInt8 = 0x09
+    static let neq2: UInt8 = 0x29
+    static let neqk: UInt8 = 0x89
+    static let neq2k: UInt8 = 0xa9
     static let gth: UInt8 = 0x0a
+    static let gth2: UInt8 = 0x2a
+    static let gth2k: UInt8 = 0xaa
     static let lth: UInt8 = 0x0b
-
+    static let lth2: UInt8 = 0x2b
+    static let lthk: UInt8 = 0x8b
+    static let lth2k: UInt8 = 0xab
+    
     static let add: UInt8 = 0x18
+    static let add2: UInt8 = 0x38
+    static let addk: UInt8 = 0x98
     static let sub: UInt8 = 0x19
     static let mul: UInt8 = 0x1a
     static let div: UInt8 = 0x1b
+    static let div2: UInt8 = 0x3b
+    static let divk: UInt8 = 0x9b
 
     static let and: UInt8 = 0x1c
     static let ora: UInt8 = 0x1d
     static let eor: UInt8 = 0x1e
     static let sft: UInt8 = 0x1f
+    static let sftk: UInt8 = 0x9f
+    static let sftk2: UInt8 = 0xbf
 
     static let sth: UInt8 = 0x0f
     static let sthr: UInt8 = 0x4f

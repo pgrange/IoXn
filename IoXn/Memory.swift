@@ -1,12 +1,19 @@
+import Foundation
 struct Memory : Equatable {
     let data: [UInt16: UInt8]
     
-    init(data: [UInt16 : UInt8]) {
+    private init(data: [UInt16 : UInt8]) {
         self.data = data
     }
     
-    init() {
-        self.data = [UInt16:UInt8]()
+    init(initializedWith rom: Data = Data()) {
+        var data = [UInt16: UInt8]()
+        
+        for (index, byte) in rom.enumerated() {
+            data[UInt16(index + 0x100)] = byte
+        }
+        
+        self.data = data
     }
     
     func read<N: Operand>(_ address: UInt16, as type: N.Type) -> N {

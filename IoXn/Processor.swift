@@ -1,4 +1,5 @@
 private enum Opcode: UInt8 {
+    case brk = 0x00
     case inc = 0x01
     
     case pop = 0x02
@@ -25,12 +26,10 @@ private enum Opcode: UInt8 {
     case str  = 0x13
     case lda  = 0x14
     case sta  = 0x15
+
+
     case dei  = 0x16
     case deo  = 0x17
-    
-    // TODO
-    // https://wiki.xxiivv.com/site/uxntal_reference.html#dei
-    // https://wiki.xxiivv.com/site/uxntal_reference.html#deo
     
     case add = 0x18
     case sub = 0x19
@@ -122,6 +121,9 @@ struct Processor : Equatable {
     private func step_<N: Operand>(programCounter: UInt16, memory: Memory, devices: Devices, for: N.Type, reverseStack: Bool, keepStack: Bool, opcode: Opcode) -> (Processor, Memory, UpdateProgramCounter) {
         let instruction = Instruction<N>(self, programCounter, memory, devices, reverseStack: reverseStack, keepStack: keepStack)
         switch opcode {
+        case .brk:
+            return (self, memory, { _ in nil })
+            
         case .inc:
             return inc(instruction)
             
@@ -241,9 +243,19 @@ struct Processor : Equatable {
     }
 }
 
+func run(_ processor: Processor, from programCounter: UInt16, withMemory memory: Memory)
+-> (processor: Processor, memory: Memory) {
+    let opCode = memory.read(programCounter, as: UInt8.self)
+    let (processor, memory, updateProgramCounter) = processor.step(opCode, withMemory: memory, programCounter: programCounter)
+    guard let nextProgramCounter = updateProgramCounter(programCounter) else {
+        return (processor, memory)
+    }
+    return run(processor, from: nextProgramCounter, withMemory: memory)
+}
+
 private struct InstructionState<N: Operand> {
     private let processor: Processor
-    let programCounter: UInt16 //TODO make it private
+    let programCounter: UInt16 //TODO make it private and abstract actual pc computation for later
     private let memory: Memory
     private let devices: Devices
     private let reverseStack: Bool
@@ -336,6 +348,10 @@ private struct InstructionState<N: Operand> {
     
     func push(_ value: N, _ stack: Stack = .workingStack) -> InstructionState<N> {
         push(value, stack, as: N.self)
+    }
+
+    func pushByte(_ value: UInt8, _ stack: Stack = .workingStack) -> InstructionState<N> {
+        push(value, stack, as: UInt8.self)
     }
 
     func pushShort(_ value: UInt16, _ stack: Stack = .workingStack) -> InstructionState<N> {
@@ -665,6 +681,12 @@ private struct OperationUnaryResult<N: Operand> {
     func push(_ stack: Stack = .workingStack) -> (Processor, Memory, UpdateProgramCounter) {
         return state.push(result, stack).terminate()
     }
+
+    func pushByte(_ stack: Stack = .workingStack) -> (Processor, Memory, UpdateProgramCounter) {
+        let toPush = result.toByteArray().last!
+        return state.pushByte(toPush, stack).terminate()
+    }
+
 }
 
 private struct OperationBinaryResult<N: Operand> {
@@ -795,7 +817,7 @@ private func eor<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memor
 }
 
 private func sft<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
-    return instruction.pop().pop().apply21({
+    return instruction.popByte().pop().apply21({
         a, b in
         let shiftRight = b & 0x0F
         let shiftLeft = b >> 4
@@ -821,24 +843,26 @@ private func ovr<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memor
 }
 
 private func equ<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
-    return instruction
-        .pop().pop().apply21( { a, b in a == b ? 1 : 0 } ).push()
+    compare(instruction, ==)
 }
 
 private func neq<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
-    return instruction
-        .pop().pop().apply21( { a, b in a == b ? 0 : 1 } ).push()
+    compare(instruction, !=)
 }
 
 private func gth<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
-    return instruction
-        .pop().pop().apply21( { a, b in a > b ? 1 : 0 } ).push()
+    compare(instruction, >)
 }
 
 private func lth<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
-    return instruction
-        .pop().pop().apply21( { a, b in a < b ? 1 : 0 } ).push()
+    compare(instruction, <)
 }
+
+private func compare<N: Operand>(_ instruction: Instruction<N>, _ comparison: (N, N) -> Bool) -> (Processor, Memory, UpdateProgramCounter) {
+    return instruction
+        .pop().pop().apply21( { a, b in comparison(a, b) ? 1 : 0 } ).pushByte()
+}
+
 
 private func sth<N: Operand>(_ instruction: Instruction<N>) -> (Processor, Memory, UpdateProgramCounter) {
     return instruction
